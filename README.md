@@ -8,7 +8,7 @@ A [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/
 
 ```bash
 mkdir -p ~/.claude/skills
-git clone https://github.com/<your-username>/e2e-test-reviewer.git ~/.claude/skills/e2e-test-reviewer
+git clone https://github.com/dididy/e2e-test-reviewer.git ~/.claude/skills/e2e-test-reviewer
 ```
 
 ### Manual (skill file only)
