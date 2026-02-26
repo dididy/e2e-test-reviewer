@@ -1,0 +1,50 @@
+# Changelog
+
+## [2.0.0] - 2026-02-27
+
+### Added
+- **Raw DOM Queries** check (#7, Tier 1): Detects `document.querySelector*` / `getElementById` inside `evaluate()` / `waitForFunction()` that bypass framework element APIs
+- **Hard-coded Timeouts** check (#12, Tier 2): Detects `waitForTimeout()` / `cy.wait(ms)` and magic timeout numbers without explanation
+- **POM error swallowing** detection in #3: `.catch(() => {})` / `.catch(() => false)` on POM wait/assertion methods
+- **POM boolean trap** detection in #5: Methods returning `Promise<boolean>` instead of exposing element handles
+- **Cross-file duplicate** detection in #9: Cross-check similar test names across different spec files
+- **Severity guide** in output format: HIGH / MEDIUM / LOW classification for findings
+- **Quick Reference** table restored (14 items, compressed)
+- **Skip protection** rule: `test.skip()` with a reason comment or string is intentional — do not flag
+
+### Changed
+- **Framework-agnostic**: Principles are now framework-independent with specific guidance for Playwright, Cypress, and Puppeteer where they differ (#5, #7, #12)
+- **POM files in scope**: Review checklist now explicitly covers Page Object Model files, not just spec files
+- Renumbered all checks (1-7 Tier 1, 8-14 Tier 2) to accommodate new items
+- Updated README pattern tables to 14 items with framework-agnostic examples
+- Updated plugin.json and marketplace.json descriptions and keywords
+
+### Removed
+- Playwright-only assumptions from rules and examples
+
+## [1.1.0] - 2026-02-26
+
+### Added
+- **Tier structure**: Checks split into Tier 1 (high-impact bugs, always check) and Tier 2 (quality improvements, check when time permits)
+- **Flaky Selectors** check (#11): Detects positional selectors (`nth()`, `first()`) and unstable raw text matching that break across environments or i18n changes
+
+### Changed
+- Merged "Conditional Assertions" and "Conditional Skip" into a single **Conditional Bypass** check (#6) — both are symptoms of the same root cause
+- Trimmed examples for obvious patterns (Always-Passing, Boolean Trap) — kept only BAD examples where the anti-pattern is self-evident
+- Renumbered all checks to reflect tier ordering (1-6 Tier 1, 7-12 Tier 2)
+- Updated README pattern tables to match new tier structure
+
+### Removed
+- Quick Reference table (redundant with detailed check sections)
+- Verification section (too generic to be useful)
+- "When to Use" section (redundant with frontmatter description)
+- ~48% reduction in SKILL.md line count while preserving all detection rules
+
+## [1.0.0] - 2025-06-15
+
+### Added
+- Initial release with 12-point checklist
+- Detects: name-assertion mismatch, missing Then, render-only tests, duplicate scenarios, misleading names, over-broad assertions, always-passing assertions, conditional assertions, error swallowing, boolean traps, conditional skips, YAGNI in Page Objects
+- Framework-agnostic design with Playwright examples
+- YAGNI audit procedure with classification table output
+- Task-based output format with concrete code fixes

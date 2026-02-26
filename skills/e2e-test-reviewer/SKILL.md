@@ -1,274 +1,227 @@
 ---
 name: e2e-test-reviewer
-description: Use when reviewing, auditing, or improving existing E2E test specs. Triggers on tasks like "review tests", "improve test quality", "audit specs", "check test scenarios". Detects naming-assertion mismatch, missing Then, duplicate scenarios, render-only tests, over-broad assertions, always-passing assertions, error swallowing, boolean traps, and YAGNI violations in Page Objects.
+description: Use when reviewing, auditing, or improving existing E2E test specs. Triggers on tasks like "review tests", "improve test quality", "audit specs", "check test scenarios". Detects naming-assertion mismatch, missing Then, error swallowing, always-passing assertions, boolean traps, conditional bypass, raw DOM queries, render-only tests, duplicate scenarios, misleading names, over-broad assertions, hard-coded timeouts, flaky selectors, and YAGNI violations in Page Objects.
 ---
 
 # E2E Test Scenario Quality Review
 
-Systematic checklist for reviewing E2E spec files against YAGNI, DRY, KISS, and SOLID principles. Framework-agnostic but examples use Playwright syntax.
-
-## When to Use
-
-- Reviewing existing spec files for quality
-- After generating new E2E tests (post-generation audit)
-- Periodic spec hygiene sweeps
-- When test suites grow large and need cleanup
+Systematic checklist for reviewing E2E **spec files AND Page Object Model (POM) files**. Framework-agnostic principles; code examples show Playwright, Cypress, and Puppeteer where they differ.
 
 ## Review Checklist
 
-Run each check against every **non-skipped** test in the target spec files.
+Run each check against every **non-skipped** test and every **changed POM file**.
 
-### 1. Name-Assertion Alignment (KISS)
+**Important:** `test.skip()` with a reason comment or reason string is intentional — do NOT flag or remove these. Only flag mid-test conditional skips that hide failures (see #6).
+
+---
+
+### Tier 1 — High-Impact Bugs (always check)
+
+#### 1. Name-Assertion Alignment
 
 **Symptom:** Test name promises something the assertions don't verify.
 
 ```typescript
-// BAD: Name says "status" but only checks visibility
+// BAD — name says "status" but only checks visibility
 test('should display paragraph status', () => {
-  await expect(status).toBeVisible();  // Where's the status content check?
-});
-
-// GOOD: Name matches what's actually verified
-test('should display paragraph control area', () => {
-  await expect(status).toBeVisible();
-  await expect(settingsDropdown).toBeVisible();
+  await expect(status).toBeVisible();  // no status content check
 });
 ```
 
-**Rule:** Every noun in the test name must have a corresponding assertion. If the assertion is missing, either add it or rename the test.
+**Rule:** Every noun in the test name must have a corresponding assertion. Add it or rename.
 
-### 2. Missing Then (Incomplete Verification)
+#### 2. Missing Then
 
-**Symptom:** Test performs actions but doesn't verify the final expected state.
+**Symptom:** Test acts but doesn't verify the final expected state.
 
 ```typescript
-// BAD: Toggles but doesn't verify the reverse state
-test('should cancel edit on Escape', () => {
-  await input.click();                    // enter edit mode
-  await page.keyboard.press('Escape');
-  await expect(text).toBeVisible();       // text is back...
-  // BUT: is the input actually hidden?
-});
-
-// GOOD: Verify both sides of the state change
+// BAD — toggles but doesn't verify the dismissed state
 test('should cancel edit on Escape', () => {
   await input.click();
   await page.keyboard.press('Escape');
   await expect(text).toBeVisible();
-  await expect(input).toBeHidden();
+  // input still hidden?
 });
 ```
 
 **Rule:** For toggle/cancel/close actions, verify both the restored state AND the dismissed state.
 
-### 3. Render-Only Tests (Low E2E Value)
+#### 3. Error Swallowing
 
-**Symptom:** Test only calls `toBeVisible()` with no interaction or content assertion.
+**Symptom (spec):** `try/catch` wrapping assertions — test passes on error.
+
+**Symptom (POM):** `.catch(() => {})` or `.catch(() => false)` on awaited operations — caller never sees the failure.
 
 ```typescript
-// LOW VALUE: Pure render check
-test('should display title', () => {
-  await expect(title.container).toBeVisible();
-});
+// BAD spec — silent pass
+try { await expect(header).toBeVisible(); }
+catch { console.log('skipped'); }
 
-// HIGHER VALUE: Render + content
-test('should display title', () => {
-  await expect(title.text).toBeVisible();
-  await expect(title.text).not.toBeEmpty();
-});
+// BAD POM — caller thinks execution succeeded
+await runningIndicator.waitFor({ state: 'detached' }).catch(() => {});
 ```
 
-**Rule:** Strengthen render-only tests by adding at least one of:
-- Content assertion (`not.toBeEmpty()`, `toContainText()`)
-- Count assertion (`toHaveCount(n)`)
-- Sibling element assertion (related controls visible alongside main element)
+**Rule (spec):** Never wrap assertions in try/catch. Use `test.skip()` in `beforeEach` if the test can't run.
 
-### 4. Duplicate Scenarios (DRY)
+**Rule (POM):** Remove `.catch(() => {})` / `.catch(() => false)` from wait/assertion methods. If the operation can legitimately fail, the caller should decide how to handle it. Only keep catch for UI stabilization like `editor.click({ force: true }).catch(() => textArea.focus())`.
 
-**Symptom:** Two tests share >70% of their steps with minor variations.
+#### 4. Always-Passing Assertions
 
-```typescript
-// BAD: Test 2 and Test 3 do nearly the same thing
-test('should show modal and allow running', ...);
-test('should show modal for items without results', ...);
-
-// GOOD: Merge into one comprehensive test
-test('should show confirmation modal with preview and allow running', ...);
-```
-
-**Rule:** If two tests differ only in setup or a single assertion, merge them. Use the richer verification set from both.
-
-### 5. Misleading Test Names
-
-**Symptom:** Name implies UI interaction but test uses API/REST, or name implies feature X but tests feature Y.
+**Symptom:** Assertion that can never fail.
 
 ```typescript
-// BAD: Sounds like UI action, but uses REST API + reload
-test('should add a new paragraph', ...);
-
-// GOOD: Name reflects actual mechanism
-test('should reflect paragraph added via API after reload', ...);
-```
-
-**Rule:** If the test uses REST API, reload, or indirect methods, the name must make that explicit.
-
-### 6. Over-Broad Assertions (KISS)
-
-**Symptom:** Assertion is too loose to catch regressions.
-
-```typescript
-// BAD: Any string containing '%' passes
-expect(content.includes('%')).toBe(true);
-
-// GOOD: Explicit expected values
-expect(['', '%python', '%md']).toContain(content.trim());
-```
-
-**Rule:** Prefer exact matches or explicit value lists over `.includes()` or loose regex when the set of valid values is known and small.
-
-### 7. Always-Passing Assertions (Tautology)
-
-**Symptom:** Assertion that can never fail regardless of application state.
-
-```typescript
-// BAD: count >= 0 is always true
-const count = await items.count();
+// BAD — count >= 0 is always true
 expect(count).toBeGreaterThanOrEqual(0);
-
-// GOOD: Assert meaningful minimum
-await expect(items).toHaveCount(5);
-// or at least:
-expect(count).toBeGreaterThan(0);
 ```
 
-**Rule:** Search for `toBeGreaterThanOrEqual(0)`, `toBeTruthy()` on strings that are always truthy, and `||` chains in `expect().toBe(true)` that accept empty/default values as valid.
+**Rule:** Search for `toBeGreaterThanOrEqual(0)`, `toBeTruthy()` on always-truthy strings, `||` chains that accept defaults as valid.
 
-### 8. Conditional Assertions (Silent Pass)
+#### 5. Boolean Trap Assertions
 
-**Symptom:** `expect()` inside an `if` block — when the condition is false, the test passes without asserting anything.
+**Symptom (spec):** `expect(bool).toBe(true)` — failure message is just "expected false to be true".
+
+**Symptom (POM):** Method returns `Promise<boolean>` instead of exposing an element handle — forces spec into boolean trap.
 
 ```typescript
-// BAD: If spinner is not visible, assertion never runs — test passes silently
+// BAD — boolean return forces spec into trap
+async isEditorVisible(index = 0): Promise<boolean> {
+  return await paragraph.locator('code-editor').isVisible();
+}
+expect(await page.isEditorVisible(0)).toBe(true);
+```
+
+**Rule (spec):** Use the framework's built-in assertion instead of extracting a boolean first:
+- **Playwright:** `await expect(locator).toBeVisible()`
+- **Cypress:** `cy.get(selector).should('be.visible')`
+- **Puppeteer:** `await page.waitForSelector(selector, { visible: true })`
+
+**Rule (POM):** Expose the element handle (Locator / selector string) instead of returning `Promise<boolean>`. Let specs use framework assertions directly.
+
+#### 6. Conditional Bypass (Silent Pass / Hidden Skip)
+
+**Symptom:** `expect()` inside `if` block, or mid-test `test.skip()` — test silently passes when feature is broken.
+
+```typescript
+// BAD — if spinner never appears, assertion never runs
 if (await spinner.isVisible()) {
   await expect(spinner).toBeHidden({ timeout: 5000 });
 }
-
-// GOOD: Always assert
-await expect(spinner).toBeVisible();
-await expect(spinner).toBeHidden({ timeout: 5000 });
 ```
 
-Also catches: `if (count > 0) { /* all assertions here */ } else { console.log('skipped'); }`
+**Rule:** Every test path must contain at least one `expect()`. Move environment checks to `beforeEach` or declaration-level `test.skip()`.
 
-**Rule:** Every test path must contain at least one `expect()`. If a condition might skip assertions, the test setup is wrong, not the assertion.
+#### 7. Raw DOM Queries (Bypassing Framework API)
 
-### 9. Error Swallowing (try/catch)
-
-**Symptom:** Test catches errors and logs instead of failing.
+**Symptom:** Test drops into raw `document.querySelector*` / `document.getElementById` via `evaluate()` when the framework's element lookup API could do the same job.
 
 ```typescript
-// BAD: Test passes even on timeout/network error
-try {
-  await page.goto('/dashboard');
-  await expect(header).toBeVisible();
-} catch (error) {
-  console.log('Navigation skipped:', error);
-}
-
-// GOOD: Let errors fail the test. Use test.fixme() or test.skip() if known broken
-test('should navigate to dashboard', async ({ page }) => {
-  await page.goto('/dashboard');
-  await expect(header).toBeVisible();
-});
+// BAD — no auto-wait, returns stale boolean
+const has = await page.evaluate((i) => {
+  return !!document.querySelectorAll('.para')[i]?.querySelector('.result');
+}, 0);
+expect(has).toBe(true);
 ```
 
-**Rule:** Never wrap assertions in try/catch. If the test can't run in certain environments, use `test.skip()` with a clear reason in `beforeEach`, not a silent catch.
+**Why it matters:** No auto-waiting, no retry, boolean trap, framework error messages lost.
 
-### 10. Boolean Trap Assertions
+**Rule:** Use the framework's element API instead of raw DOM:
+- **Playwright:** `page.locator()` + web-first assertions
+- **Cypress:** `cy.get()` / `cy.find()` — avoid `cy.window().then(win => win.document.querySelector(...))`
+- **Puppeteer:** `page.$()` / `page.waitForSelector()` — avoid `page.evaluate(() => document.querySelector(...))`
 
-**Symptom:** `expect(complexCondition).toBe(true)` — when it fails, error message is just "expected false to be true" with no diagnostic context.
+Only use `evaluate`/`waitForFunction` when the framework API can't express the condition (`getComputedStyle`, cross-element DOM relationships). In POM, add a comment explaining why.
+
+---
+
+### Tier 2 — Quality Improvements (check when time permits)
+
+#### 8. Render-Only Tests (Low E2E Value)
+
+**Symptom:** Test only calls `toBeVisible()` with no interaction or content assertion.
+
+**Rule:** Add at least one of: content assertion (`not.toBeEmpty()`, `toContainText()`), count assertion (`toHaveCount(n)`), or sibling element assertion.
+
+#### 9. Duplicate Scenarios (DRY)
+
+**Symptom:** Two tests share >70% of their steps with minor variations.
+
+**Rule (within file):** Merge tests that differ only in setup or a single assertion. Use the richer verification set from both.
+
+**Rule (cross-file):** After reviewing all files in scope, cross-check tests with similar names across different spec files. If test A in `feature-settings.spec.ts` is a subset of test B in `feature-form-validation.spec.ts`, delete A and strengthen B.
+
+#### 10. Misleading Test Names (KISS)
+
+**Symptom:** Name implies UI interaction but test uses API/REST, or name implies feature X but tests feature Y.
+
+**Rule:** If the test uses REST API, reload, or indirect methods, the name must make that explicit.
+
+#### 11. Over-Broad Assertions (KISS)
+
+**Symptom:** Assertion too loose to catch regressions.
 
 ```typescript
-// BAD: Failure message is useless
-const isVisible = await element.isVisible();
-expect(isVisible).toBe(true);
-
-// GOOD: Playwright auto-retries and gives clear error
-await expect(element).toBeVisible();
+// BAD — any string containing '%' passes
+expect(content.includes('%')).toBe(true);
 ```
+
+**Rule:** Prefer exact matches or explicit value lists over `.includes()` or loose regex when valid values are known and small.
+
+#### 12. Hard-coded Timeouts
+
+**Symptom:** `waitForTimeout()` or magic timeout numbers scattered across tests and POM.
 
 ```typescript
-// BAD: Which condition failed?
-expect(a === 'x' || b === 'y').toBe(true);
+// BAD — arbitrary sleep
+await page.waitForTimeout(2000);
 
-// GOOD: Separate assertions with clear messages
-expect(a).toBe('x');
-// or if genuinely OR:
-expect([a, b]).toEqual(expect.arrayContaining(['x']));
+// BAD — magic number, no explanation
+await element.waitFor({ state: 'visible', timeout: 30000 });
 ```
 
-**Rule:** Replace `expect(bool).toBe(true/false)` with specific matchers (`toBeVisible()`, `toContainText()`, `toHaveCount()`). If unavoidable, add a message: `expect(condition, 'element should be in edit mode').toBe(true)`.
+**Rule:** Never use explicit sleep (`waitForTimeout` / `cy.wait(ms)`) — rely on framework auto-wait or retry mechanisms. For custom timeouts, extract named constants with comments explaining why the default isn't sufficient.
 
-### 11. Conditional Skip Hiding Failures
+#### 13. Flaky Selectors
 
-**Symptom:** Mid-test `test.skip()` inside a condition — test silently skips when the feature is broken.
+**Symptom:** Positional selectors or unstable text that breaks across environments.
 
 ```typescript
-// BAD: If autocomplete is broken, test reports "skipped" not "failed"
-const isVisible = await autocomplete.isVisible();
-if (!isVisible) {
-  test.skip();
-  return;
-}
-
-// GOOD: If autocomplete is expected, fail. If environment-dependent, skip in beforeEach
-test.beforeEach(({ page }) => {
-  test.skip(!hasAutoComplete, 'Autocomplete not available in this environment');
-});
+// BAD — breaks if DOM order changes
+await expect(items.nth(2)).toContainText('Settings');
 ```
 
-**Rule:** Mid-test skips mask failures. Move environment checks to `beforeEach`. If the feature should work, let the test fail.
+**Rule:** Prefer `data-testid`, role-based, or attribute-based selectors over `nth()` or raw text. If `nth()` is unavoidable, add a comment. For text selectors, use regex with `i` flag or `hasText` filter.
 
-### 12. YAGNI in Page Objects (Unused Members Audit)
+#### 14. YAGNI in Page Objects
 
-**Symptom:** Page Object Model has locators/methods never referenced by any spec.
+**Symptom:** POM has locators/methods never referenced by any spec.
 
 **Procedure:**
-1. For each changed/staged Page Object file, list all public members (properties, sub-properties, methods)
-2. Grep each member name across all test files and other Page Objects
-3. Classify each member:
+1. List all public members of each changed POM file
+2. Grep each member across all test files and other POMs
+3. Classify: USED / INTERNAL-ONLY (`private`) / UNUSED (delete)
 
-| Status | Meaning | Action |
-|--------|---------|--------|
-| USED | Referenced in 1+ spec or Page Object | Keep |
-| INTERNAL-ONLY | Used only by other methods in same class | Change to `private` |
-| UNUSED | Not referenced anywhere outside definition | Delete |
+**Common patterns:** Convenience wrappers (`clickEdit()` when specs use `editButton.click()`), getter methods (`getCount()` when specs use `toHaveCount()`), state checkers (`isEditMode()` when specs assert on elements directly), pre-built "just in case" locators.
 
-**Common YAGNI patterns to catch:**
-- Convenience wrappers: `clickEdit()` when specs use `editButton.click()` directly
-- Getter methods: `getItemCount()` when specs use `toHaveCount()` assertion
-- State checkers: `isEditMode()` when specs assert on visible elements directly
-- Pre-built locators: `addLinks` defined "just in case"
-- Sub-properties in composed objects: `title.container` when only `title.text` is used
+**Rule:** Delete unused members. Make internal-only members `private`. Shared utils must be used by 2+ specs.
 
-**Rule:** Delete unused members. Make internal-only members `private`. Shared utility methods must be used by 2+ specs or be deleted.
-
-**Output:** Include YAGNI audit table in findings:
+**Output:**
 ```
 | File | Member | Used In | Status |
 |------|--------|---------|--------|
-| item-page.ts | addLinks | (none) | DELETE |
-| form-page.ts | searchDialog | internal only | PRIVATE |
+| page.ts | addLinks | (none) | DELETE |
+| page.ts | searchDialog | internal only | PRIVATE |
 ```
+
+---
 
 ## Output Format
 
-Present findings as a plan with:
+Present findings grouped by severity:
 
 ```markdown
-## Task N: [filename] - [issue type]
+## [HIGH/MEDIUM/LOW] Task N: [filename] — [issue type]
 
-### N-1. `[test name]`
+### N-1. `[test name or POM method]`
 - **Issue:** [description]
 - **Fix:** [name change / assertion addition / merge / deletion]
 - **Code:**
@@ -277,32 +230,26 @@ Present findings as a plan with:
   ```
 ```
 
-## Verification
-
-After applying fixes:
-```bash
-# Type check (adjust path to your tsconfig)
-npx tsc --noEmit --project e2e/tsconfig.json
-
-# Run affected tests
-npx playwright test --project=chromium [changed files]
-```
+**Severity guide:**
+- **HIGH:** Error swallowing, always-passing, conditional bypass, raw DOM queries — tests that silently pass when broken
+- **MEDIUM:** Boolean traps, missing Then, duplicates — tests that work but give poor diagnostics or waste CI time
+- **LOW:** Render-only, naming, YAGNI, timeouts — quality/maintenance improvements
 
 ## Quick Reference
 
-| Check | Principle | Detection Signal |
-|-------|-----------|-----------------|
-| Name-Assertion mismatch | KISS | Noun in name with no matching `expect()` |
-| Missing Then | Complete | Action without final state verification |
-| Render-only | E2E value | Only `toBeVisible()`, no content/count |
-| Duplicate scenario | DRY | >70% shared steps between tests |
-| Misleading name | KISS | API/reload in "should [UI verb]" test |
-| Over-broad assertion | KISS | `.includes()` where enum values known |
-| Always-passing assertion | Tautology | `>=0`, truthy on non-empty strings |
-| Conditional assertion | Silent pass | `expect()` inside `if` block |
-| Error swallowing | Reliability | `try/catch` around assertions |
-| Boolean trap | Debuggability | `expect(bool).toBe(true)` |
-| Conditional skip | Reliability | Mid-test `test.skip()` inside `if` |
-| Unused Page Object member | YAGNI | Property/method not referenced in any spec |
-| Internal-only member | SRP | Public member used only within same class |
-| Convenience wrapper | YAGNI | `clickX()` wrapping `xButton.click()` |
+| # | Check | Tier | Detection Signal |
+|---|-------|------|-----------------|
+| 1 | Name-Assertion | T1 | Noun in name with no matching `expect()` |
+| 2 | Missing Then | T1 | Action without final state verification |
+| 3 | Error Swallowing | T1 | `try/catch` in spec, `.catch(() => {})` in POM |
+| 4 | Always-Passing | T1 | `>=0`, truthy on non-empty, `\|\|` defaults |
+| 5 | Boolean Trap | T1 | `expect(bool).toBe(true)`, POM returns boolean |
+| 6 | Conditional Bypass | T1 | `expect()` inside `if`, mid-test `test.skip()` |
+| 7 | Raw DOM Queries | T1 | `document.querySelector` in `evaluate` bypassing framework API |
+| 8 | Render-Only | T2 | Only `toBeVisible()`, no content/count |
+| 9 | Duplicate | T2 | >70% shared steps, cross-file overlap |
+| 10 | Misleading Name | T2 | API/reload in "should [UI verb]" test |
+| 11 | Over-Broad | T2 | `.includes()` where enum values known |
+| 12 | Hard-coded Timeout | T2 | `waitForTimeout()`, magic numbers |
+| 13 | Flaky Selectors | T2 | `nth()` without comment, raw text matching |
+| 14 | YAGNI in POM | T2 | Public member not referenced in any spec |

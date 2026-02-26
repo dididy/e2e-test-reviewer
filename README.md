@@ -32,43 +32,35 @@ Audit the spec files in tests/
 Are there any always-passing tests?
 ```
 
-## 12 Patterns Detected (with Before/After)
+## 14 Patterns Detected
 
-### Reliability Patterns
-
-| # | Pattern | Before | After |
-|---|---------|--------|-------|
-| 7 | **Always-passing assertion** | `expect(count).toBeGreaterThanOrEqual(0)` | `expect(count).toBeGreaterThan(0)` |
-| 8 | **Conditional assertion** | `if (visible) { expect(x).toBeHidden() }` | `await expect(x).toBeVisible(); await expect(x).toBeHidden()` |
-| 9 | **Error swallowing** | `try { ... } catch { console.log() }` | Let errors fail the test |
-| 11 | **Conditional skip** | `if (!ready) { test.skip(); return }` | Move env checks to `beforeEach` |
-
-### Naming & Completeness
+### Tier 1 — High-Impact Bugs (always check)
 
 | # | Pattern | Before | After |
 |---|---------|--------|-------|
 | 1 | **Name-assertion mismatch** | Name says "status" but only checks `toBeVisible()` | Add assertion for status content, or rename |
 | 2 | **Missing Then** | Cancel action, verify text restored — input still visible? | Verify both `text.toBeVisible()` and `input.toBeHidden()` |
-| 5 | **Misleading name** | `should add a paragraph` (uses REST API) | `should reflect paragraph added via API after reload` |
+| 3 | **Error swallowing** | `try/catch` in spec, `.catch(() => {})` in POM | Let errors fail; remove silent catch from POM methods |
+| 4 | **Always-passing assertion** | `expect(count).toBeGreaterThanOrEqual(0)` | `expect(count).toBeGreaterThan(0)` |
+| 5 | **Boolean trap** | POM returns `Promise<boolean>`, spec does `expect(bool).toBe(true)` | POM exposes element handle, spec uses framework assertion |
+| 6 | **Conditional bypass** | `if (visible) { expect(...) }` or mid-test `test.skip()` | Always assert; move env checks to `beforeEach` |
+| 7 | **Raw DOM queries** | `document.querySelector` in `evaluate()` | Use framework element API (`locator` / `cy.get` / `page.$`) |
 
-### Assertion Quality
-
-| # | Pattern | Before | After |
-|---|---------|--------|-------|
-| 3 | **Render-only test** | `expect(title).toBeVisible()` | Add `expect(title).not.toBeEmpty()` |
-| 6 | **Over-broad assertion** | `expect(s.includes('%')).toBe(true)` | `expect(['%python', '%md']).toContain(s)` |
-| 10 | **Boolean trap** | `expect(isVisible).toBe(true)` | `await expect(element).toBeVisible()` |
-
-### Code Maintenance
+### Tier 2 — Quality Improvements (check when time permits)
 
 | # | Pattern | Before | After |
 |---|---------|--------|-------|
-| 4 | **Duplicate scenario** | Two tests share 90% of steps | Merge into one comprehensive test |
-| 12 | **Unused Page Object member** | `clickEdit()` never called by any spec | Delete or make `private` |
+| 8 | **Render-only test** | `expect(title).toBeVisible()` | Add `expect(title).not.toBeEmpty()` |
+| 9 | **Duplicate scenario** | Two tests share 90% of steps (within or cross-file) | Merge into one comprehensive test |
+| 10 | **Misleading name** | `should add a paragraph` (uses REST API) | `should reflect paragraph added via API after reload` |
+| 11 | **Over-broad assertion** | `expect(s.includes('%')).toBe(true)` | `expect(['%python', '%md']).toContain(s)` |
+| 12 | **Hard-coded timeout** | `waitForTimeout(2000)` / `cy.wait(2000)` | Rely on framework auto-wait; extract named constants |
+| 13 | **Flaky selectors** | `items.nth(2).toContainText('Settings')` | Use `data-testid`, role-based, or attribute selectors |
+| 14 | **Unused Page Object member** | `clickEdit()` never called by any spec | Delete or make `private` |
 
 ## Compatibility
 
-Framework-agnostic. Examples use [Playwright](https://playwright.dev/) syntax, but the checks apply to any E2E test suite with a Page Object Model pattern (Cypress, Selenium, etc).
+Framework-agnostic principles with framework-specific guidance for [Playwright](https://playwright.dev/), [Cypress](https://www.cypress.io/), and [Puppeteer](https://pptr.dev/). Checks apply to any E2E test suite with a Page Object Model pattern.
 
 ## Key Insight
 
