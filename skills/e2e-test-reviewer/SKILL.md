@@ -343,6 +343,20 @@ Present findings grouped by severity:
   ```
 ```
 
+**After all findings, append a summary table:**
+
+```markdown
+## Review Summary
+
+| Sev | Count | Top Issue | Affected Files |
+|-----|-------|-----------|----------------|
+| P0  | 3     | Missing Then | auth.spec.ts, form.spec.ts |
+| P1  | 5     | Duplicate Scenarios | settings.spec.ts |
+| P2  | 2     | Render-Only | dashboard.spec.ts |
+
+**Total: 10 issues across 4 files. Fix P0 first.**
+```
+
 **Severity classification:**
 - **P0 (Must fix):** Test silently passes when the feature is broken — no real verification happening
 - **P1 (Should fix):** Test works but gives poor diagnostics, wastes CI time, or misleads developers
