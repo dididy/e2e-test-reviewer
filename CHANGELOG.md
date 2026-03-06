@@ -1,5 +1,11 @@
 # Changelog
 
+## [3.1.0] - 2026-03-06
+
+### Changed
+- **SKILL.md moved to repo root** — eliminates redundant `e2e-test-reviewer/skills/e2e-test-reviewer/` nesting when installed as a plugin
+- **plugin.json skills path** updated from `./skills/e2e-test-reviewer` to `./`
+
 ## [3.0.0] - 2026-03-06
 
 ### Added
