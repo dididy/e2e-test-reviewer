@@ -74,6 +74,27 @@ The LLM performs only these checks:
 
 ---
 
+## Phase 3: Coverage Gap Analysis (After Review)
+
+After completing Phase 1 + 2, identify scenarios the test suite does NOT cover. Scan the page/feature under test and flag missing:
+
+| Gap Type | What to look for |
+|----------|-----------------|
+| Error paths | Form validation errors, API failure states, network offline, 404/500 pages |
+| Edge cases | Empty state, max-length input, special characters, concurrent actions |
+| Accessibility | Keyboard navigation, screen reader labels, focus management after modal/dialog |
+| Auth boundaries | Unauthorized access redirects, expired session handling, role-based visibility |
+
+**Output:** List up to 5 highest-value missing scenarios as suggestions, not requirements. Format:
+
+```markdown
+## Coverage Gaps (Suggestions)
+1. **[Error path]** No test for form submission with server error — add API mock returning 500
+2. **[Edge case]** No test for empty list state — verify empty state message shown
+```
+
+---
+
 ## Review Checklist
 
 Run each check against every **non-skipped** test and every **changed POM file**.
