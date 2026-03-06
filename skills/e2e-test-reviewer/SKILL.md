@@ -78,7 +78,7 @@ Run each check against every **non-skipped** test and every **changed POM file**
 
 ---
 
-### Tier 1 — High-Impact Bugs (always check)
+### Tier 1 — P0/P1 (always check)
 
 #### 1. Name-Assertion Alignment `[LLM-only]`
 
@@ -196,7 +196,7 @@ Only use `evaluate`/`waitForFunction` when the framework API can't express the c
 
 ---
 
-### Tier 2 — Quality Improvements (check when time permits)
+### Tier 2 — P1/P2 (check when time permits)
 
 #### 8. Render-Only Tests (Low E2E Value) `[LLM-only]`
 
@@ -282,7 +282,7 @@ await expect(items.nth(2)).toContainText('Settings');
 Present findings grouped by severity:
 
 ```markdown
-## [HIGH/MEDIUM/LOW] Task N: [filename] — [issue type]
+## [P0/P1/P2] Task N: [filename] — [issue type]
 
 ### N-1. `[test name or POM method]`
 - **Issue:** [description]
@@ -293,29 +293,29 @@ Present findings grouped by severity:
   ```
 ```
 
-**Severity guide:**
-- **HIGH:** Error swallowing, always-passing, conditional bypass, raw DOM queries — tests that silently pass when broken
-- **MEDIUM:** Boolean traps, missing Then, duplicates — tests that work but give poor diagnostics or waste CI time
-- **LOW:** Render-only, naming, YAGNI, timeouts — quality/maintenance improvements
+**Severity classification:**
+- **P0 (Must fix):** Test silently passes when the feature is broken — no real verification happening
+- **P1 (Should fix):** Test works but gives poor diagnostics, wastes CI time, or misleads developers
+- **P2 (Nice to fix):** Weak but not wrong — maintenance and robustness improvements
 
 ## Quick Reference
 
-| # | Check | Tier | Phase | Detection Signal |
-|---|-------|------|-------|-----------------|
-| 1 | Name-Assertion | T1 | LLM | Noun in name with no matching `expect()` |
-| 2 | Missing Then | T1 | LLM | Action without final state verification |
-| 3 | Error Swallowing | T1 | grep | `try/catch` in spec, `.catch(() => {})` in POM |
-| 4 | Always-Passing | T1 | grep | `>=0`, truthy on non-empty, `\|\|` defaults |
-| 5 | Boolean Trap | T1 | grep | `expect(bool).toBe(true)`, POM returns boolean |
-| 6 | Conditional Bypass | T1 | grep | `expect()` inside `if`, mid-test `test.skip()` |
-| 7 | Raw DOM Queries | T1 | grep | `document.querySelector` in `evaluate` bypassing framework API |
-| 8 | Render-Only | T2 | LLM | Only `toBeVisible()`, no content/count |
-| 9 | Duplicate | T2 | LLM | >70% shared steps, cross-file overlap |
-| 10 | Misleading Name | T2 | LLM | API/reload in "should [UI verb]" test |
-| 11 | Over-Broad | T2 | LLM | `.includes()` where enum values known |
-| 12 | Hard-coded Timeout | T2 | grep | `waitForTimeout()`, magic numbers |
-| 13 | Flaky Selectors | T2 | LLM | `nth()` without comment, raw text matching |
-| 14 | YAGNI in POM | T2 | LLM | Public member not referenced in any spec |
+| # | Check | Sev | Phase | Detection Signal |
+|---|-------|-----|-------|-----------------|
+| 1 | Name-Assertion | P0 | LLM | Noun in name with no matching `expect()` |
+| 2 | Missing Then | P0 | LLM | Action without final state verification |
+| 3 | Error Swallowing | P0 | grep | `try/catch` in spec, `.catch(() => {})` in POM |
+| 4 | Always-Passing | P0 | grep | `>=0`, truthy on non-empty, `\|\|` defaults |
+| 5 | Boolean Trap | P1 | grep | `expect(bool).toBe(true)`, POM returns boolean |
+| 6 | Conditional Bypass | P0 | grep | `expect()` inside `if`, mid-test `test.skip()` |
+| 7 | Raw DOM Queries | P1 | grep | `document.querySelector` in `evaluate` |
+| 8 | Render-Only | P2 | LLM | Only `toBeVisible()`, no content/count |
+| 9 | Duplicate | P1 | LLM | >70% shared steps, cross-file overlap |
+| 10 | Misleading Name | P1 | LLM | API/reload in "should [UI verb]" test |
+| 11 | Over-Broad | P2 | LLM | `.includes()` where enum values known |
+| 12 | Hard-coded Timeout | P2 | grep | `waitForTimeout()`, magic numbers |
+| 13 | Flaky Selectors | P1 | LLM | `nth()` without comment, raw text matching |
+| 14 | YAGNI in POM | P2 | LLM | Public member not referenced in any spec |
 
 ---
 
