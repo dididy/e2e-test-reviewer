@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.0.0] - 2026-03-06
+
+### Added
+- **P0/P1/P2 severity classification** for all 14 checks — P0 (must fix), P1 (should fix), P2 (nice to fix)
+- **Phase 3: Coverage Gap Analysis** — identifies missing error paths, edge cases, accessibility, and auth boundary tests after review
+- **Review Summary table** in output format — aggregates findings by severity with affected file list
+- **Flaky sub-patterns** in #13: network dependency without mock (13b), animation race conditions (13c)
+- **Procedure + Common patterns** for checks #1 (Name-Assertion), #2 (Missing Then), #9 (Duplicate Scenarios) — matching depth of #14 YAGNI
+- **Network mock grep** in Phase 1 — detects `page.goto`/`cy.visit` without nearby route/intercept setup
+
+### Changed
+- **#13 renamed** from "Flaky Selectors" to "Flaky Patterns" — now covers positional selectors, network mocks, and animation timing
+- **Tier headers** updated to show severity range (P0/P1 for Tier 1, P1/P2 for Tier 2)
+- **Severity guide** changed from HIGH/MEDIUM/LOW to P0/P1/P2 with clearer definitions
+- **Quick Reference table** replaced Tier column with Sev column
+
 ## [2.1.1] - 2026-03-02
 
 ### Fixed

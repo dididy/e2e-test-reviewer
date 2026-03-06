@@ -1,6 +1,6 @@
 ---
 name: e2e-test-reviewer
-description: Use when reviewing, auditing, or improving existing E2E test specs. Triggers on tasks like "review tests", "improve test quality", "audit specs", "check test scenarios". Detects naming-assertion mismatch, missing Then, error swallowing, always-passing assertions, boolean traps, conditional bypass, raw DOM queries, render-only tests, duplicate scenarios, misleading names, over-broad assertions, hard-coded timeouts, flaky patterns, and YAGNI violations in Page Objects.
+description: Use when reviewing, auditing, or improving existing E2E test specs. Triggers on tasks like "review tests", "improve test quality", "audit specs", "check test scenarios", "check coverage gaps". Detects naming-assertion mismatch, missing Then, error swallowing, always-passing assertions, boolean traps, conditional bypass, raw DOM queries, render-only tests, duplicate scenarios, misleading names, over-broad assertions, hard-coded timeouts, flaky patterns, and YAGNI violations in Page Objects.
 ---
 
 # E2E Test Scenario Quality Review
