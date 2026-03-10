@@ -21,7 +21,7 @@ npx skills install dididy/e2e-test-skill
 
 ```bash
 mkdir -p ~/.claude/skills
-git clone https://github.com/dididy/e2e-test-reviewer.git ~/.claude/skills/e2e-test-skill
+git clone https://github.com/dididy/e2e-test-skills.git ~/.claude/skills/e2e-test-skill
 ```
 
 ---
