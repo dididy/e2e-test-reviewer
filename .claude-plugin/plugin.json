@@ -1,12 +1,13 @@
 {
-  "name": "e2e-test-reviewer",
-  "version": "3.1.0",
-  "description": "Systematic 14-point checklist for reviewing E2E test quality across Playwright, Cypress, and Puppeteer. Three-phase review: automated grep, LLM analysis, coverage gap analysis. P0/P1/P2 severity classification. Tier 1 catches high-impact bugs: error swallowing, boolean traps, raw DOM queries, conditional bypass. Tier 2 covers quality improvements: duplicates, hard-coded timeouts, flaky patterns, YAGNI in Page Objects.",
+  "name": "e2e-test-skill",
+  "version": "4.0.0",
+  "description": "Two complementary E2E skills: review existing specs for quality issues (14-point checklist, P0/P1/P2 severity), and debug failed test reports (root cause classification, direct trace.zip parsing — no extra dependencies).",
   "license": "Apache-2.0",
   "author": {
     "name": "YONGJAE LEE"
   },
   "skills": [
-    "./"
+    "./skills/review",
+    "./skills/debug"
   ]
 }

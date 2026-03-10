@@ -1,5 +1,22 @@
 # Changelog
 
+## [4.0.0] - 2026-03-10
+
+### Changed
+- **Plugin renamed** from `e2e-test-reviewer` to `e2e-test-skill` — reflects expanded scope
+- **Mono-skill structure**: skills now live in `skills/review/` and `skills/debug/` subdirectories
+- **Skill names** updated to `e2e-test-skill-review` and `e2e-test-skill-debug`
+- **plugin.json** skills array updated to `["./skills/review", "./skills/debug"]`
+
+### Added
+- **`e2e-test-skill-debug`** — new skill for diagnosing Playwright test failures
+  - Phase 1: parses `results.json` to extract failed tests, error messages, duration
+  - Phase 2: classifies each failure into F1–F14 root cause categories using error signals
+  - Phase 3: trace analysis via direct `trace.zip` parsing (`unzip -p | node`) — no extra dependencies; covers failed steps, DOM snapshot, network failures, JS console errors
+  - Phase 4: concrete fix suggestion per failure with P0/P1/P2 severity
+  - Cross-references `e2e-test-skill-review` pattern numbers (e.g. F2 → #14 POM Drift)
+  - Temporary `page.screenshot()` + browser agent pattern for cases trace alone can't resolve
+
 ## [3.3.0] - 2026-03-07
 
 ### Added
