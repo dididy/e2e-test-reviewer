@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.1.1] - 2026-03-11
+
+### Changed
+- **`skills/review/` renamed to `skills/e2e-test-reviewer/`** — folder name matches skill name
+
 ## [4.1.0] - 2026-03-11
 
 ### Added
