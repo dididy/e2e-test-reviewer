@@ -1,5 +1,25 @@
 # Changelog
 
+## [4.1.0] - 2026-03-11
+
+### Added
+- **`cypress-debugger`** — new skill for diagnosing Cypress test failures from mochawesome/JUnit report files
+  - Phase 1: parses `mochawesome.json` or JUnit XML for failed tests, error messages, duration
+  - Phase 2: classifies each failure into F1–F14 root cause categories
+  - Phase 3: screenshot and video analysis via `cypress/screenshots/` and `cypress/videos/`
+  - Phase 4: concrete fix suggestion per failure with P0/P1/P2 severity
+- **`playwright-debugger` GitHub PR integration** — given a PR URL, automatically finds the failed CI run and downloads the playwright-report artifact via `gh`; reuses PR URL from conversation context when user says "failed again"
+
+### Changed
+- **`e2e-test-debugger` renamed to `playwright-debugger`** — reflects Playwright-only scope
+- **`skills/debug/` renamed to `skills/playwright-debug/`** — consistent naming with new `cypress-debug/`
+- **`playwright-debugger` title** updated to "Playwright Failed Test Debugger" — removes ambiguous "E2E" prefix
+- **Repository renamed** to `e2e-skills` — shorter, cleaner package name
+- **README**: restructured with "When to Use" sections, three-skill pipeline, Compatibility section
+- **Installation**: fixed install command typo (`e2e-test-skill` → `e2e-skills`)
+- **Skill descriptions** disambiguated: `e2e-test-reviewer` is static code analysis; `playwright-debugger` and `cypress-debugger` are runtime failure diagnosis — prevents incorrect skill selection on "flaky tests" queries
+- **`marketplace.json`**: added `ci`, `ci-failure`, `playwright-debugger`, `cypress-debugger`, `test-review`, `test-audit`, `regression` keywords
+
 ## [4.0.1] - 2026-03-11
 
 ### Changed

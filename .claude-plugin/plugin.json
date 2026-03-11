@@ -1,13 +1,14 @@
 {
-  "name": "e2e-test-skill",
-  "version": "4.0.0",
-  "description": "Two complementary E2E skills: review existing specs for quality issues (14-point checklist, P0/P1/P2 severity), and debug failed test reports (root cause classification, direct trace.zip parsing — no extra dependencies).",
+  "name": "e2e-skills",
+  "version": "4.1.0",
+  "description": "Three E2E testing skills: audit Playwright, Cypress, and Puppeteer specs for quality issues (14 anti-patterns, P0/P1/P2 severity), debug failed Playwright tests from playwright-report/, and debug failed Cypress tests from cypress/reports/.",
   "license": "Apache-2.0",
   "author": {
     "name": "YONGJAE LEE"
   },
   "skills": [
     "./skills/review",
-    "./skills/debug"
+    "./skills/playwright-debug",
+    "./skills/cypress-debug"
   ]
 }

@@ -1,21 +1,34 @@
 ---
-name: e2e-test-debugger
-description: Use when Playwright tests have failed and you need to diagnose root causes from report files. Triggers on tasks like "debug failing tests", "analyze test failures", "why did these tests fail", "investigate CI failures", or when given a playwright-report directory.
+name: playwright-debugger
+description: Use when Playwright tests have actually failed and you need to diagnose runtime failures — from a playwright-report directory, local or CI. Triggers on "debug playwright tests", "why did playwright tests fail", "playwright CI failure", "flaky playwright test failures", "playwright timeout error", "tests pass locally but fail in CI", "analyze playwright-report", "PR failing in CI". Classifies runtime failures into root causes (not static code analysis) and suggests concrete fixes.
 ---
 
-# E2E Failed Test Debugger
+# Playwright Failed Test Debugger
 
 Diagnose Playwright test failures from report files. Classifies root causes and provides concrete fixes.
 
-## Prerequisites: Run Tests First
+## Prerequisites: Get the Report
 
-**Do NOT run `playwright test` directly and read its stdout** — output may be truncated by token-optimizing proxies (e.g. rtk). Instead:
+Determine the report source in this order:
 
+**1. GitHub PR URL given** (e.g. `https://github.com/org/repo/pull/123`)
 ```bash
-npx playwright test --reporter=json 2>/dev/null > playwright-report/results.json
+# Find the failed CI run for this PR
+gh pr checks <PR_URL> --json name,state,detailsUrl | jq '[.[] | select(.state == "FAILURE")]'
+
+# Download playwright-report artifact from the failed run
+gh run download <RUN_ID> --name playwright-report --dir playwright-report
 ```
 
-Then parse the report file in Phase 1.
+If the user says "it failed again" or "still failing" — check the current conversation for a previously mentioned PR URL and reuse it automatically before asking.
+
+**2. `playwright-report/` already exists locally** → skip to Phase 1.
+
+**3. No report available** → run tests locally:
+```bash
+# Do NOT read stdout directly — output may be truncated
+npx playwright test --reporter=json 2>/dev/null > playwright-report/results.json
+```
 
 ## Phase 1: Extract Failures
 
