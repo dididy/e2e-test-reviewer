@@ -58,7 +58,7 @@ My tests pass CI but I think they miss regressions
 | 1 | **Name-assertion mismatch** | Name says "status" but only checks `toBeVisible()` | Add assertion for status content, or rename |
 | 2 | **Missing Then** | Cancel action, verify text restored — input still visible? | Verify both `text.toBeVisible()` and `input.toBeHidden()` |
 | 3 | **Error swallowing** | `try/catch` in spec, `.catch(() => {})` in POM | Let errors fail; remove silent catch from POM methods |
-| 4 | **Always-passing assertion** | `expect(count).toBeGreaterThanOrEqual(0)` | `expect(count).toBeGreaterThan(0)` |
+| 4 | **Always-passing assertion** | `expect(count).toBeGreaterThanOrEqual(0)`, `toBeAttached()` on unconditionally rendered elements | `expect(count).toBeGreaterThan(0)`; remove vacuous attachment checks |
 | 5 | **Boolean trap** | `expect(locator).toBeTruthy()` on non-boolean objects (always passes) | Use framework assertion (`toBeVisible()`); skip when value is actual boolean like `response.ok()` |
 | 6 | **Conditional bypass** | `if (visible) { expect(...) }` or mid-test `test.skip()` | Always assert; move env checks to `beforeEach` |
 | 7 | **Raw DOM queries** | `document.querySelector` in `evaluate()` | Use framework element API (`locator` / `cy.get` / `page.$`) |
@@ -80,13 +80,13 @@ My tests pass CI but I think they miss regressions
 
 Three-phase review with P0/P1/P2 severity:
 
-1. **Phase 1: Automated grep** — mechanically detects error swallowing, always-passing, boolean traps, conditional bypass, raw DOM, timeouts, missing network mocks
+1. **Phase 1: Automated grep** — mechanically detects error swallowing, always-passing (including `toBeAttached()` on static elements), boolean traps, conditional bypass, raw DOM, timeouts, missing network mocks
 2. **Phase 2: LLM analysis** — semantic checks for naming, missing assertions, duplicates, flaky patterns, YAGNI
 3. **Phase 3: Coverage gaps** — suggests missing error paths, edge cases, accessibility, and auth boundary tests
 
 ---
 
-## Skill 2: `playwright-debugger` — Failure Debugger
+## Skill 2: `playwright-debugger` — Playwright Failure Debugger
 
 Diagnoses Playwright test failures from a `playwright-report/` directory — whether failures happened locally or in CI. Classifies root causes and provides concrete fixes.
 

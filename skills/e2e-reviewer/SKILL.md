@@ -13,18 +13,18 @@ Once the review target files are determined, use the Grep tool to mechanically d
 
 **What each check detects:**
 
-- **#3 Error Swallowing** — `.catch(() => {})` or `.catch(() => false)` silently hides failures. Search `.ts/.js/.cy.*` for `\.catch(\s*() =>`, excluding `node_modules` and lines with `// justified`.
-- **#4 Always-Passing** — assertions that can never fail (e.g. `count >= 0`). Search for `toBeGreaterThanOrEqual(0)` or `should.*(gte|greaterThan).*0`.
+- **#3 Error Swallowing** — `.catch(() => {})` or `.catch(() => false)` silently hides failures. Search `.ts/.js/.cy.*` for `\.catch\(\s*(async\s*)?\(\)\s*=>`, excluding `node_modules` and lines with `// JUSTIFIED`. **Critical:** `// JUSTIFIED:` must appear on the **same line** as `.catch(` — a comment on the next line is invisible to grep and does NOT suppress the flag.
+- **#4 Always-Passing** — assertions that can never fail (e.g. `count >= 0`). Search for `toBeGreaterThanOrEqual(0)` or `should.*(gte|greaterThan).*0`. Also search for `toBeAttached()` — for each hit, check whether the element can ever be absent from the DOM. If it is unconditionally rendered (no conditional rendering directive, not inside a conditional block, not dynamically mounted), `toBeAttached()` is vacuous → flag P0. Exception: if a comment explains the element is intentionally CSS-hidden (`visibility:hidden`, not `display:none`), `toBeAttached()` is the correct choice — skip.
 - **#5 Boolean Trap** — `toBeTruthy()` on Locator/ElementHandle objects (objects are always truthy). Search `.spec.*/.test.*/.cy.*` for `expect(.*).toBeTruthy()`, excluding lines ending in `.ok()`, `.isVisible()`, `.isChecked()`, `.isDisabled()`, `.isEnabled()`, `.isEditable()`, `.isHidden()`.
 - **#6 Conditional Bypass** — `expect()` inside `if(isVisible)` silently skips assertions. Search `.spec.*/.test.*/.cy.*` for `if.*(isVisible|is\(.*:visible.*\))`.
-- **#7 Raw DOM Queries** — `document.querySelector` bypasses framework auto-wait. Search `.spec.*/.test.*/.cy.*` for `document\.querySelector`.
+- **#7 Raw DOM Queries** — `document.querySelector` bypasses framework auto-wait. Search `.spec.*/.test.*/.cy.*` for `document\.querySelector` (covers both `evaluate()` and `waitForFunction()`).
 - **#12 Hard-coded Timeouts** — arbitrary sleeps cause flakiness. Search `.ts/.js/.cy.*` for `waitForTimeout` or `cy\.wait\(\d`.
 - **#13b Missing Network Mock** — `page.goto`/`cy.visit` without nearby route/intercept creates real network dependency. Search `.spec.*/.test.*/.cy.*` for `page\.goto|cy\.visit`, then filter out lines containing `route.`, `intercept`, or `mock`.
 
 **Interpreting results:**
 - Zero hits → no mechanical issues found, proceed to Phase 2
 - Any hit → report each line as an issue (includes file:line)
-- Lines with `// justified` comments are intentional — skip them
+- Lines with `// JUSTIFIED` comments are intentional — skip them
 
 **Output Phase 1 results as-is.** The LLM must not reinterpret them.
 
@@ -141,16 +141,30 @@ await runningIndicator.waitFor({ state: 'detached' }).catch(() => {});
 
 **Rule (POM):** Remove `.catch(() => {})` / `.catch(() => false)` from wait/assertion methods. If the operation can legitimately fail, the caller should decide how to handle it. Only keep catch for UI stabilization like `editor.click({ force: true }).catch(() => textArea.focus())`.
 
-#### 4. Always-Passing Assertions `[grep-detectable]`
+#### 4. Always-Passing Assertions `[grep-detectable + LLM confirmation]`
 
 **Symptom:** Assertion that can never fail.
 
 ```typescript
 // BAD — count >= 0 is always true
 expect(count).toBeGreaterThanOrEqual(0);
+
+// BAD — element is unconditionally rendered; always in DOM regardless of app state
+await expect(page.locator('.sidebar')).toBeAttached();
+
+// BAD — element is in the static HTML shell; attached before the framework even boots
+await expect(page.locator('#app')).toBeAttached();
 ```
 
 **Rule:** Search for `toBeGreaterThanOrEqual(0)`, `toBeTruthy()` on always-truthy strings, `||` chains that accept defaults as valid.
+
+Also search for `toBeAttached()`. For each hit, determine whether the element can ever be absent from the DOM:
+- **Unconditionally rendered** (no conditional block in template, always mounted) → `toBeAttached()` is vacuous → **flag P0**
+- **In the static HTML shell** (present before the framework boots) → always attached → **flag P0**
+- **Intentionally CSS-hidden** (`visibility:hidden`, not `display:none`) → `toBeVisible()` would falsely fail; `toBeAttached()` is correct — **skip** (expect a comment explaining this)
+- **Conditionally rendered** (removed from DOM when inactive) → `toBeAttached()` is meaningful — **skip**
+
+**Fix:** Replace with `toBeVisible()` if visibility is the intent, or remove if other assertions already cover the same element.
 
 #### 5. Boolean Trap Assertions `[grep-detectable]`
 
@@ -190,24 +204,33 @@ if (await spinner.isVisible()) {
 
 #### 7. Raw DOM Queries (Bypassing Framework API) `[grep-detectable]`
 
-**Symptom:** Test drops into raw `document.querySelector*` / `document.getElementById` via `evaluate()` when the framework's element lookup API could do the same job.
+**Symptom:** Test uses `document.querySelector*` / `document.getElementById` inside `evaluate()` or `waitForFunction()` when the framework's element API could do the same job.
 
 ```typescript
-// BAD — no auto-wait, returns stale boolean
-const has = await page.evaluate((i) => {
-  return !!document.querySelectorAll('.para')[i]?.querySelector('.result');
-}, 0);
+// BAD — waitForFunction with querySelector; use locator.waitFor() instead
+await page.waitForFunction(
+  () => document.querySelectorAll('.item').length > 0
+);
+
+// BAD — evaluate with querySelector; returns stale boolean, no auto-wait
+const has = await page.evaluate(() => !!document.querySelector('.result'));
 expect(has).toBe(true);
+```
+
+```typescript
+// GOOD — framework API with auto-wait and retry
+await page.locator('.item').first().waitFor({ state: 'attached' });
+await expect(page.locator('.result')).toBeAttached();
 ```
 
 **Why it matters:** No auto-waiting, no retry, boolean trap, framework error messages lost.
 
 **Rule:** Use the framework's element API instead of raw DOM:
-- **Playwright:** `page.locator()` + web-first assertions
+- **Playwright:** `locator.waitFor({ state: 'attached' })` replaces `waitForFunction(() => querySelector(...) !== null)`; `page.locator()` + web-first assertions replaces `evaluate(() => querySelector(...))`
 - **Cypress:** `cy.get()` / `cy.find()` — avoid `cy.window().then(win => win.document.querySelector(...))`
 - **Puppeteer:** `page.$()` / `page.waitForSelector()` — avoid `page.evaluate(() => document.querySelector(...))`
 
-Only use `evaluate`/`waitForFunction` when the framework API can't express the condition (`getComputedStyle`, cross-element DOM relationships). In POM, add a comment explaining why.
+Only use `evaluate`/`waitForFunction` when the framework API genuinely can't express the condition: multi-condition AND/OR logic, `getComputedStyle`, `children.length`, cross-element DOM relationships, or `body.textContent` checks. Add `// JUSTIFIED:` explaining why.
 
 ---
 
@@ -382,7 +405,7 @@ Present findings grouped by severity:
 | 1 | Name-Assertion | P0 | LLM | Noun in name with no matching `expect()` |
 | 2 | Missing Then | P0 | LLM | Action without final state verification |
 | 3 | Error Swallowing | P0 | grep | `try/catch` in spec, `.catch(() => {})` in POM |
-| 4 | Always-Passing | P0 | grep | `>=0`, truthy on non-empty, `\|\|` defaults |
+| 4 | Always-Passing | P0 | grep+LLM | `>=0`, truthy on non-empty, `\|\|` defaults; `toBeAttached()` → check if element is unconditionally rendered or in static HTML |
 | 5 | Boolean Trap | P1 | grep | `expect(locator).toBeTruthy()` on non-boolean objects; skip when value is actual boolean (`.ok()`, `.isVisible()`) |
 | 6 | Conditional Bypass | P0 | grep | `expect()` inside `if`, mid-test `test.skip()` |
 | 7 | Raw DOM Queries | P1 | grep | `document.querySelector` in `evaluate` |
@@ -399,6 +422,36 @@ Present findings grouped by severity:
 
 ## Suppression
 
-When a grep-detected pattern is intentional, add a `// justified: [reason]` comment to the line. Phase 1 will exclude it.
+When a grep-detected pattern is intentional, add a `// JUSTIFIED: [reason]` comment to the line. Phase 1 will exclude it.
 
-Example: `await editor.click({ force: true }).catch(() => textArea.focus()); // justified: UI stabilization fallback`
+**Critical: the comment must be on the exact same line as the pattern.** A comment on the preceding or following line is NOT detected by grep.
+
+```typescript
+// BAD — comment is inside the catch block; grep still flags the .catch( line
+await editor.click({ force: true }).catch(async () => {
+  // JUSTIFIED: UI stabilization
+  await textArea.focus();
+});
+
+// GOOD — comment is on the same line as .catch(
+await editor.click({ force: true }).catch(async () => { // JUSTIFIED: UI stabilization
+  await textArea.focus();
+});
+
+// GOOD — single-line catch
+await editor.click({ force: true }).catch(() => {}); // JUSTIFIED: UI stabilization — click attempt follows
+```
+
+**Named function wrappers do not help.** Extracting a `.catch()` into a named function still requires `// JUSTIFIED:` on each individual `.catch(` line inside that function:
+
+```typescript
+// STILL NEEDS justified on each .catch( line inside
+const tryFocus = async () => {
+  await el.waitFor({ state: 'visible' }).catch(() => {}); // JUSTIFIED: UI stabilization
+  await el.click().catch(async () => { // JUSTIFIED: UI stabilization — falls back to focus
+    await el.locator('textarea').focus();
+  });
+};
+```
+
+Example: `await editor.click({ force: true }).catch(() => textArea.focus()); // JUSTIFIED: UI stabilization fallback`

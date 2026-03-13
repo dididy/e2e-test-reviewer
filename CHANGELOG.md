@@ -1,5 +1,16 @@
 # Changelog
 
+## [4.2.0] - 2026-03-13
+
+### Added
+- **`e2e-reviewer` #4 Always-Passing — `toBeAttached()` detection**: Added grep + LLM template check for `toBeAttached()` on unconditionally rendered elements (elements always present in DOM regardless of app state). Decision tree: unconditionally rendered or in static HTML shell → flag P0; CSS `visibility:hidden` variant or conditionally rendered → skip (meaningful assertion).
+- **`e2e-reviewer` Suppression — same-line rule**: `// JUSTIFIED:` comment must appear on the **same line** as `.catch(` — a comment on the next line is invisible to grep. Added BAD/GOOD examples and a note that named function wrappers don't help (each inner `.catch(` still needs its own `// JUSTIFIED:` comment).
+
+### Changed
+- **`e2e-reviewer` #3 Error Swallowing grep pattern**: Updated to `\.catch\(\s*(async\s*)?\(\)\s*=>` — now detects both sync (`() => {}`) and async (`async () => {}`) silent catch variants.
+- **`e2e-reviewer` #7 Raw DOM Queries scope expanded**: Now explicitly covers `document.querySelector` inside `waitForFunction()` in addition to `evaluate()`. Rule updated: `locator.waitFor({ state: 'attached' })` replaces single-condition `waitForFunction(() => querySelector(...) !== null)`. Exception list expanded: multi-condition AND/OR, `children.length`, `body.textContent`, `getComputedStyle` — add `// JUSTIFIED:` explaining why.
+- **`e2e-reviewer` framework-agnostic cleanup**: Replaced project-specific examples (`nz-tree`, `zeppelin-root`, `app-root`, Angular `*ngIf`) with generic ones (`.sidebar`, `#app`, "conditional rendering directive") — skill no longer assumes Angular or any specific framework/component library.
+
 ## [4.1.4] - 2026-03-13
 
 ### Security
@@ -126,7 +137,7 @@ Validated against 5 major open-source projects (Cal.com, Ghost, Grafana, Documen
 - **Phase 2: LLM-only Checks** — LLM now only performs subjective checks (#1, #2, #8-11, #13, #14) that require semantic interpretation
 - **`[grep-detectable]` / `[LLM-only]` tags** on each checklist item for quick classification
 - **Phase column** in Quick Reference table to indicate grep vs LLM detection
-- **Suppression mechanism** — `// justified: [reason]` inline comment excludes lines from Phase 1 grep results
+- **Suppression mechanism** — `// JUSTIFIED: [reason]` inline comment excludes lines from Phase 1 grep results
 - **`npx skills` installation** method in README (recommended)
 
 ### Changed
