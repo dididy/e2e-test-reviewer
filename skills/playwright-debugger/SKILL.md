@@ -11,16 +11,9 @@ Diagnose Playwright test failures from report files. Classifies root causes and 
 
 Determine the report source in this order:
 
-**1. GitHub PR URL given** — use the GitHub CLI to find the failed CI run, then download the `playwright-report` artifact:
+**1. `playwright-report/` already exists locally** → skip to Phase 1.
 
-- Find failed checks: `gh pr checks <PR_URL> --json name,state,detailsUrl`
-- Download artifact: `gh run download <RUN_ID> --name playwright-report --dir playwright-report`
-
-If the user says "it failed again" or "still failing" — check the current conversation for a previously mentioned PR URL and reuse it automatically before asking.
-
-**2. `playwright-report/` already exists locally** → skip to Phase 1.
-
-**3. No report available** → run tests locally and write output to a file (do NOT read stdout directly — output may be truncated):
+**2. No report available** → run tests locally and write output to a file (do NOT read stdout directly — output may be truncated):
 
 ```bash
 npx playwright test --reporter=json 2>/dev/null > playwright-report/results.json
@@ -48,20 +41,20 @@ Use Phase 1 output (error message + duration + file) to classify each failure. *
 
 | # | Category | Signals | Review Pattern |
 |---|----------|---------|----------------|
-| F1 | **Flaky / Timing** | `TimeoutError`, duration near maxTimeout, passes on retry | #13a, #13c |
-| F2 | **Selector Broken** | `locator not found`, `strict mode violation`, element count mismatch | #7, #14 |
-| F3 | **Network Dependency** | `net::ERR_*`, unexpected API response, `404`/`500` | #13b |
-| F4 | **Assertion Mismatch** | `Expected X to equal Y`, subject-inversion, over-broad check | #4, #11, #11b |
+| F1 | **Flaky / Timing** | `TimeoutError`, duration near maxTimeout, passes on retry | #9a |
+| F2 | **Selector Broken** | `locator not found`, `strict mode violation`, element count mismatch | #6, #10 |
+| F3 | **Network Dependency** | `net::ERR_*`, unexpected API response, `404`/`500` | — |
+| F4 | **Assertion Mismatch** | `Expected X to equal Y`, over-broad check | #4 |
 | F5 | **Missing Then** | Action completed but wrong state remains | #2 |
-| F6 | **Condition Branch Missing** | Element conditionally present, assertion always runs | #6 |
+| F6 | **Condition Branch Missing** | Element conditionally present, assertion always runs | #5 |
 | F7 | **Test Isolation Failure** | Passes alone, fails in suite; leaked state | — |
 | F8 | **Environment Mismatch** | CI vs local only; viewport, OS, timezone | — |
 | F9 | **Data Dependency** | Missing seed data, hardcoded IDs | — |
 | F10 | **Auth / Session** | Session expired, role-based UI not rendered | — |
 | F11 | **Async Order Assumption** | `Promise.all` order, parallel race | — |
-| F12 | **POM / Locator Drift** | DOM changed, POM locator not updated | #14 |
+| F12 | **POM / Locator Drift** | DOM changed, POM locator not updated | #10 |
 | F13 | **Error Swallowing** | `.catch(() => {})` hiding failure, test passes silently | #3 |
-| F14 | **Animation Race** | Element visible but content not yet rendered | #13c |
+| F14 | **Animation Race** | Element visible but content not yet rendered | #9a |
 
 Classification steps:
 1. Match error message to signals above
@@ -99,7 +92,7 @@ Extract and read each file using `unzip -p <trace.zip> <entry>`, then parse the 
 For each failure, produce a finding in this format:
 
 **`[P0/P1/P2] test name — Category`**
-- **Category:** e.g. F2 — Selector Broken (#14 POM Drift)
+- **Category:** e.g. F2 — Selector Broken (#10 POM Drift)
 - **Error:** the raw error message
 - **Root Cause:** one sentence explanation
 - **Fix:** before/after code showing the concrete change

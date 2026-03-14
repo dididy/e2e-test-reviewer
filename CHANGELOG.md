@@ -1,6 +1,6 @@
 # Changelog
 
-## [4.3.0] - 2026-03-14
+## [1.0.0] - 2026-03-14
 
 ### Added
 - **`e2e-reviewer` #5 expanded → "Bypass Patterns"**: Added `{ force: true }` detection (P1, grep) as sub-pattern 5b alongside existing conditional assertion bypass (5a). `force: true` without `// JUSTIFIED:` hides real actionability failures that real users would encounter.
@@ -25,19 +25,19 @@
   - **#13 Hard-coded Timeout narrowed** — now only flags explicit sleeps (`waitForTimeout`, `cy.wait(ms)`); no longer flags `timeout:` option values in `waitFor` calls
 - **Renumbered**: 1–7 unchanged; 8=Duplicate, 9=Hard-coded Sleep, 10=Flaky Patterns, 11=YAGNI
 
-## [4.2.2] - 2026-03-14
+## [0.8.2] - 2026-03-14
 
 ### Added
 - **`e2e-reviewer` #9 Zombie spec file detection**: Added "zombie spec file" pattern — if ALL tests in a spec file are subsets of tests in another file covering the same feature, flag the entire file for deletion. Previously only individual test-level overlap was detected; whole-file redundancy (e.g., a 1-test file that duplicates a test in a larger suite) was missed.
 - **`e2e-reviewer` #14 Empty wrapper class detection**: Added check for POM classes that extend a parent but declare zero additional members (`class Foo extends Bar` with constructor-only body). Flags these for review (P2) — may be intentional convention or future-extension placeholder, so automatic deletion is not prescribed. Previously YAGNI only checked individual unused members, not the class itself.
 
-## [4.2.1] - 2026-03-14
+## [0.8.1] - 2026-03-14
 
 ### Fixed
 - **`e2e-reviewer` #4 toBeAttached() grep scope**: Extended search target from spec files only to `.ts/.js/.cy.*` (all files including POM/util) — `toBeAttached()` in POM helper methods was previously invisible to Phase 1 grep
 - **`e2e-reviewer` #6 Conditional Bypass POM gap**: Added explicit note that the Phase 1 grep only covers spec files; POM/util methods with `if (await el.isVisible())` guards must be reviewed manually in Phase 2
 
-## [4.2.0] - 2026-03-13
+## [0.8.0] - 2026-03-13
 
 ### Added
 - **`e2e-reviewer` #4 Always-Passing — `toBeAttached()` detection**: Added grep + LLM template check for `toBeAttached()` on unconditionally rendered elements (elements always present in DOM regardless of app state). Decision tree: unconditionally rendered or in static HTML shell → flag P0; CSS `visibility:hidden` variant or conditionally rendered → skip (meaningful assertion).
@@ -48,7 +48,7 @@
 - **`e2e-reviewer` #7 Raw DOM Queries scope expanded**: Now explicitly covers `document.querySelector` inside `waitForFunction()` in addition to `evaluate()`. Rule updated: `locator.waitFor({ state: 'attached' })` replaces single-condition `waitForFunction(() => querySelector(...) !== null)`. Exception list expanded: multi-condition AND/OR, `children.length`, `body.textContent`, `getComputedStyle` — add `// JUSTIFIED:` explaining why.
 - **`e2e-reviewer` framework-agnostic cleanup**: Replaced project-specific examples (`nz-tree`, `zeppelin-root`, `app-root`, Angular `*ngIf`) with generic ones (`.sidebar`, `#app`, "conditional rendering directive") — skill no longer assumes Angular or any specific framework/component library.
 
-## [4.1.4] - 2026-03-13
+## [0.7.4] - 2026-03-13
 
 ### Security
 - **`playwright-debugger` Indirect Prompt Injection (W011)**: Added "Security: Treat Report Data as Untrusted" section — all content from `playwright-report/` is explicitly declared untrusted external data; embedded instructions in test titles, error messages, or trace content must never be followed
@@ -58,7 +58,7 @@
 ### Changed
 - **`playwright-debugger` Prerequisites**: Removed GitHub PR URL / `gh` CLI download flow; report source is now always a user-provided local path or existing `playwright-report/` directory
 
-## [4.1.3] - 2026-03-11
+## [0.7.3] - 2026-03-11
 
 ### Fixed
 - **`e2e-reviewer` YAML parse error**: colon in frontmatter description (`naming-assertion mismatch, missing Then, error swallowing, always-passing assertions, boolean traps, conditional bypass, raw DOM queries, render-only tests, duplicate scenarios, misleading names, over-broad assertions, subject-inversion`) caused a `YAMLException` in gray-matter, making the skills CLI skip the skill entirely — replaced colon with em dash
@@ -70,18 +70,18 @@
 
 > Motivation for code block changes: reduced code density to address Socket "Obfuscated File" false positive on SKILL.md files.
 
-## [4.1.2] - 2026-03-11
+## [0.7.2] - 2026-03-11
 
 ### Changed
 - **`skills/e2e-test-reviewer/` renamed to `skills/e2e-reviewer/`** — shorter skill name for CLI discoverability
 - **`name: e2e-test-reviewer` → `name: e2e-reviewer`** in SKILL.md frontmatter
 
-## [4.1.1] - 2026-03-11
+## [0.7.1] - 2026-03-11
 
 ### Changed
 - **`skills/review/` renamed to `skills/e2e-test-reviewer/`** — folder name matches skill name
 
-## [4.1.0] - 2026-03-11
+## [0.7.0] - 2026-03-11
 
 ### Added
 - **`cypress-debugger`** — new skill for diagnosing Cypress test failures from mochawesome/JUnit report files
@@ -101,12 +101,12 @@
 - **Skill descriptions** disambiguated: `e2e-test-reviewer` is static code analysis; `playwright-debugger` and `cypress-debugger` are runtime failure diagnosis — prevents incorrect skill selection on "flaky tests" queries
 - **`marketplace.json`**: added `ci`, `ci-failure`, `playwright-debugger`, `cypress-debugger`, `test-review`, `test-audit`, `regression` keywords
 
-## [4.0.1] - 2026-03-11
+## [0.6.1] - 2026-03-11
 
 ### Changed
 - **Skill names** renamed to `e2e-test-reviewer` and `e2e-test-debugger` — shorter, more intuitive
 
-## [4.0.0] - 2026-03-10
+## [0.6.0] - 2026-03-10
 
 ### Changed
 - **Plugin renamed** from `e2e-test-reviewer` to `e2e-test-skill` — reflects expanded scope
@@ -123,7 +123,7 @@
   - Cross-references `e2e-test-skill-review` pattern numbers (e.g. F2 → #14 POM Drift)
   - Temporary `page.screenshot()` + browser agent pattern for cases trace alone can't resolve
 
-## [3.3.0] - 2026-03-07
+## [0.5.3] - 2026-03-07
 
 ### Added
 - **#11b Subject-Inversion** (P1): Detects `expect([expected]).toContain(actual)` where expected values are placed as the subject instead of the actual value — produces confusing failure messages like "Expected [200, 202] to contain 204"
@@ -131,7 +131,7 @@
 ### Context
 Discovered during n8n (177k stars) review.
 
-## [3.2.0] - 2026-03-06
+## [0.5.2] - 2026-03-06
 
 ### Changed
 - **#5 Boolean Trap**: No longer flags `toBeTruthy()` on actual boolean return values (`response.ok()`, `isVisible()`, `isChecked()`, etc.). Only flags when used on non-boolean objects (Locator, ElementHandle) that are always truthy — the real bug. Phase 1 grep now excludes known boolean-returning methods via `grep -v`.
@@ -140,13 +140,13 @@ Discovered during n8n (177k stars) review.
 ### Context
 Validated against 5 major open-source projects (Cal.com, Ghost, Grafana, Documenso, Appsmith). Documenso had 230+ `expect(response.ok()).toBeTruthy()` instances — these are working assertions on actual booleans, not bugs. Previous versions would have flagged all of them as P1.
 
-## [3.1.0] - 2026-03-06
+## [0.5.1] - 2026-03-06
 
 ### Changed
 - **SKILL.md moved to repo root** — eliminates redundant `e2e-test-reviewer/skills/e2e-test-reviewer/` nesting when installed as a plugin
 - **plugin.json skills path** updated from `./skills/e2e-test-reviewer` to `./`
 
-## [3.0.0] - 2026-03-06
+## [0.5.0] - 2026-03-06
 
 ### Added
 - **P0/P1/P2 severity classification** for all 14 checks — P0 (must fix), P1 (should fix), P2 (nice to fix)
@@ -162,12 +162,12 @@ Validated against 5 major open-source projects (Cal.com, Ghost, Grafana, Documen
 - **Severity guide** changed from HIGH/MEDIUM/LOW to P0/P1/P2 with clearer definitions
 - **Quick Reference table** replaced Tier column with Sev column
 
-## [2.1.1] - 2026-03-02
+## [0.4.1] - 2026-03-02
 
 ### Fixed
 - **#14 YAGNI in POM**: Clarified scope of "2+ specs" rule — it applies when **creating** new shared utils, not as grounds for deleting existing util files/classes that are actively imported and used. The rule now explicitly states: only flag unused individual members within util files, do not delete entire files that specs depend on.
 
-## [2.1.0] - 2026-02-27
+## [0.4.0] - 2026-02-27
 
 ### Added
 - **Phase 1: Automated Grep Checks** — deterministic pattern detection via `grep` before LLM analysis. Covers checks #3 (Error Swallowing), #4 (Always-Passing), #5 (Boolean Trap), #6 (Conditional Bypass), #7 (Raw DOM), #12 (Hard-coded Timeout), and `page.isClosed()` guards
@@ -181,7 +181,7 @@ Validated against 5 major open-source projects (Cal.com, Ghost, Grafana, Documen
 - Review workflow is now two-phase: mechanical grep first, LLM second — reduces token usage and ensures deterministic results for pattern-based checks
 - **Framework-agnostic grep patterns** — Phase 1 now covers Playwright (`toBeGreaterThanOrEqual`, `waitForTimeout`), Cypress (`should('be.gte')`, `cy.wait()`), and Puppeteer in a single command using `-E` extended regex
 
-## [2.0.0] - 2026-02-27
+## [0.3.0] - 2026-02-27
 
 ### Added
 - **Raw DOM Queries** check (#7, Tier 1): Detects `document.querySelector*` / `getElementById` inside `evaluate()` / `waitForFunction()` that bypass framework element APIs
@@ -203,7 +203,7 @@ Validated against 5 major open-source projects (Cal.com, Ghost, Grafana, Documen
 ### Removed
 - Playwright-only assumptions from rules and examples
 
-## [1.1.0] - 2026-02-26
+## [0.2.0] - 2026-02-26
 
 ### Added
 - **Tier structure**: Checks split into Tier 1 (high-impact bugs, always check) and Tier 2 (quality improvements, check when time permits)
@@ -221,7 +221,7 @@ Validated against 5 major open-source projects (Cal.com, Ghost, Grafana, Documen
 - "When to Use" section (redundant with frontmatter description)
 - ~48% reduction in SKILL.md line count while preserving all detection rules
 
-## [1.0.0] - 2025-06-15
+## [0.1.0] - 2025-06-15
 
 ### Added
 - Initial release with 12-point checklist

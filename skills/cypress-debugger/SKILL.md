@@ -57,20 +57,20 @@ Use Phase 1 output (error message + duration) to classify. **Most failures are i
 
 | # | Category | Signals | Review Pattern |
 |---|----------|---------|----------------|
-| F1 | **Flaky / Timing** | `Timed out retrying`, duration near defaultCommandTimeout, passes on retry | #13a, #13c |
-| F2 | **Selector Broken** | `Expected to find element: '...' but never found it`, `cy.get() failed` | #7, #14 |
-| F3 | **Network Dependency** | `cy.intercept()` not matched, `XHR failed`, unexpected API response | #13b |
-| F4 | **Assertion Mismatch** | `expected X to equal Y`, `AssertionError`, subject-inversion | #4, #11, #11b |
+| F1 | **Flaky / Timing** | `Timed out retrying`, duration near defaultCommandTimeout, passes on retry | #9a |
+| F2 | **Selector Broken** | `Expected to find element: '...' but never found it`, `cy.get() failed` | #6, #10 |
+| F3 | **Network Dependency** | `cy.intercept()` not matched, `XHR failed`, unexpected API response | — |
+| F4 | **Assertion Mismatch** | `expected X to equal Y`, `AssertionError` | #4 |
 | F5 | **Missing Then** | Action completed but wrong state remains | #2 |
-| F6 | **Condition Branch Missing** | Element conditionally present, assertion always runs | #6 |
+| F6 | **Condition Branch Missing** | Element conditionally present, assertion always runs | #5 |
 | F7 | **Test Isolation Failure** | Passes alone, fails in suite; leaked state via `cy.session` or cookies | — |
 | F8 | **Environment Mismatch** | CI vs local only; baseUrl, viewport, OS differences | — |
 | F9 | **Data Dependency** | Missing seed data, hardcoded IDs, `cy.fixture()` mismatch | — |
 | F10 | **Auth / Session** | `cy.session()` expired, role-based UI not rendered | — |
 | F11 | **Async Order Assumption** | `.then()` chain order, parallel `cy.request()` race | — |
-| F12 | **Selector Drift** | DOM changed, custom command or Page Object selector not updated | #14 |
+| F12 | **Selector Drift** | DOM changed, custom command or Page Object selector not updated | #10 |
 | F13 | **Error Swallowing** | `cy.on('uncaught:exception', () => false)` hiding failures | #3 |
-| F14 | **Animation Race** | Element visible but content not yet rendered; CSS transition not complete | #13c |
+| F14 | **Animation Race** | Element visible but content not yet rendered; CSS transition not complete | #9a |
 
 Classification steps:
 1. Match error message to signals above
