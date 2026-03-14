@@ -1,5 +1,36 @@
 # Changelog
 
+## [4.3.0] - 2026-03-14
+
+### Added
+- **`e2e-reviewer` #5 expanded → "Bypass Patterns"**: Added `{ force: true }` detection (P1, grep) as sub-pattern 5b alongside existing conditional assertion bypass (5a). `force: true` without `// JUSTIFIED:` hides real actionability failures that real users would encounter.
+- **`e2e-reviewer` #9 expanded → "Flaky Test Patterns"**: Added `test.describe.serial()` detection (P1, grep) `[Playwright only]` as sub-pattern 9b alongside existing positional selectors (9a). `describe.serial` creates order-dependent tests that break parallel sharding.
+- **`e2e-reviewer` trigger phrases expanded**: Added "my tests are fragile", "tests break on every UI change", "test suite is hard to maintain", "we have coverage but bugs still slip through" to SKILL.md frontmatter description
+- **`marketplace.json` keywords expanded**: Added `fragile-test`, `brittle-test`, `static-analysis`, `test-maintenance`, `test-smell`, `false-positive`, `end-to-end`, `spec`
+- **README Key Insight** moved to top (after workflow section) for GEO discoverability
+
+### Changed
+- **`e2e-reviewer` reduced to 10 patterns** — removed 3 more checks that weren't reliably detectable via static analysis:
+  - **#5 Boolean Trap removed** — `expect(locator).toBeTruthy()` is rare in practice among Playwright/Cypress users; low ROI
+  - **#10b Animation Race removed** from Flaky Patterns — cannot be detected statically; requires running the tests to confirm
+  - **#4 Always-Passing `toBeAttached()` simplified** — replaced multi-step template-reading decision tree with a single rule: flag any `toBeAttached()` with no inline comment. No template analysis required.
+- **Description updated** across `marketplace.json` and `plugin.json` — new hook: "catch what CI misses — tests that pass but prove nothing, and failures that are hard to trace"
+- **Project-specific examples removed** from SKILL.md — replaced with generic element/variable names throughout
+- **`e2e-reviewer` reduced to 11 patterns** — removed 4 checks that were too subjective or context-dependent for general use:
+  - **#8 Render-Only removed** — smoke tests legitimately use only `toBeVisible()`; too many false positives
+  - **#10 Misleading Names removed** — absorbed into #1 (Name-Assertion Alignment); a name that implies a mechanism the test doesn't use is already a name-assertion mismatch
+  - **#11 Over-Broad Assertions removed** — too domain-specific; "known enum values" is not universally determinable
+  - **#12 Subject-Inversion removed** — `expect([200, 202]).toContain(status)` is a common and readable pattern in many teams
+  - **#13b Missing Network Mock removed** from Flaky Patterns — real E2E philosophy intentionally avoids mocks; prescribing mocks conflicts with team conventions
+  - **#13 Hard-coded Timeout narrowed** — now only flags explicit sleeps (`waitForTimeout`, `cy.wait(ms)`); no longer flags `timeout:` option values in `waitFor` calls
+- **Renumbered**: 1–7 unchanged; 8=Duplicate, 9=Hard-coded Sleep, 10=Flaky Patterns, 11=YAGNI
+
+## [4.2.2] - 2026-03-14
+
+### Added
+- **`e2e-reviewer` #9 Zombie spec file detection**: Added "zombie spec file" pattern — if ALL tests in a spec file are subsets of tests in another file covering the same feature, flag the entire file for deletion. Previously only individual test-level overlap was detected; whole-file redundancy (e.g., a 1-test file that duplicates a test in a larger suite) was missed.
+- **`e2e-reviewer` #14 Empty wrapper class detection**: Added check for POM classes that extend a parent but declare zero additional members (`class Foo extends Bar` with constructor-only body). Flags these for review (P2) — may be intentional convention or future-extension placeholder, so automatic deletion is not prescribed. Previously YAGNI only checked individual unused members, not the class itself.
+
 ## [4.2.1] - 2026-03-14
 
 ### Fixed

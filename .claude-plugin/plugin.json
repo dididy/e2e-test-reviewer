@@ -1,14 +1,14 @@
 {
   "name": "e2e-skills",
-  "version": "4.2.1",
-  "description": "Three E2E testing skills: audit Playwright, Cypress, and Puppeteer specs for quality issues (14 anti-patterns, P0/P1/P2 severity), debug failed Playwright tests from playwright-report/, and debug failed Cypress tests from cypress/reports/.",
+  "version": "4.3.0",
+  "description": "Three E2E skills that catch what CI misses — tests that pass but prove nothing, and failures that are hard to trace. Audits Playwright, Cypress, and Puppeteer specs against 10 anti-patterns (P0/P1/P2), debugs failed Playwright tests from playwright-report/, and Cypress tests from cypress/reports/.",
   "license": "Apache-2.0",
   "author": {
     "name": "YONGJAE LEE"
   },
   "skills": [
     "./skills/e2e-reviewer",
-    "./skills/playwright-debug",
-    "./skills/cypress-debug"
+    "./skills/playwright-debugger",
+    "./skills/cypress-debugger"
   ]
 }

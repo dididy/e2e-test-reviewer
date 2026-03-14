@@ -12,6 +12,8 @@ The typical workflow:
 2. If tests fail → run `playwright-debugger` or `cypress-debugger` → fix → re-run tests
 3. Once tests pass → run `e2e-reviewer` again to confirm no new issues
 
+> AI-generated E2E tests tend toward the statistically likely result — visibility checks that always pass, loose assertions that accept anything, and convenience methods that nobody calls. These skills catch what CI misses: **tests that pass but prove nothing**, and **failures that are hard to trace**.
+
 ## Installation
 
 ```bash
@@ -49,38 +51,33 @@ Are there any always-passing tests?
 My tests pass CI but I think they miss regressions
 ```
 
-### 14 Patterns Detected
+### 10 Patterns Detected
 
 #### Tier 1 — P0/P1 (always check)
 
 | # | Pattern | Before | After |
 |---|---------|--------|-------|
-| 1 | **Name-assertion mismatch** | Name says "status" but only checks `toBeVisible()` | Add assertion for status content, or rename |
+| 1 | **Name-assertion mismatch** | Name says "status" but only checks `toBeVisible()`; name implies UI toggle but test uses localStorage | Add assertion for status content, or rename to match actual mechanism |
 | 2 | **Missing Then** | Cancel action, verify text restored — input still visible? | Verify both `text.toBeVisible()` and `input.toBeHidden()` |
 | 3 | **Error swallowing** | `try/catch` in spec, `.catch(() => {})` in POM | Let errors fail; remove silent catch from POM methods |
-| 4 | **Always-passing assertion** | `expect(count).toBeGreaterThanOrEqual(0)`, `toBeAttached()` on unconditionally rendered elements | `expect(count).toBeGreaterThan(0)`; remove vacuous attachment checks |
-| 5 | **Boolean trap** | `expect(locator).toBeTruthy()` on non-boolean objects (always passes) | Use framework assertion (`toBeVisible()`); skip when value is actual boolean like `response.ok()` |
-| 6 | **Conditional bypass** | `if (visible) { expect(...) }` or mid-test `test.skip()` | Always assert; move env checks to `beforeEach` |
-| 7 | **Raw DOM queries** | `document.querySelector` in `evaluate()` | Use framework element API (`locator` / `cy.get` / `page.$`) |
+| 4 | **Always-passing assertion** | `expect(count).toBeGreaterThanOrEqual(0)`, `toBeAttached()` with no comment | `expect(count).toBeGreaterThan(0)`; add comment or replace with `toBeVisible()` |
+| 5 | **Bypass patterns** | `if (visible) { expect(...) }`; `page.click(sel, { force: true })` without comment | Always assert; move env checks to `beforeEach`; add `// JUSTIFIED:` to force:true |
+| 6 | **Raw DOM queries** | `document.querySelector` in `evaluate()` | Use framework element API (`locator` / `cy.get` / `page.$`) |
 
 #### Tier 2 — P1/P2 (check when time permits)
 
 | # | Pattern | Before | After |
 |---|---------|--------|-------|
-| 8 | **Render-only test** | `expect(title).toBeVisible()` | Add `expect(title).not.toBeEmpty()` |
-| 9 | **Duplicate scenario** | Two tests share 90% of steps (within or cross-file) | Merge into one comprehensive test |
-| 10 | **Misleading name** | `should add a paragraph` (uses REST API) | `should reflect paragraph added via API after reload` |
-| 11 | **Over-broad assertion** | `expect(s.includes('%')).toBe(true)` | `expect(['%python', '%md']).toContain(s)` |
-| 11b | **Subject-inversion** | `expect([200, 202]).toContain(status)` | `expect(status === 200 \|\| status === 202).toBe(true)` |
-| 12 | **Hard-coded timeout** | `waitForTimeout(2000)` / `cy.wait(2000)` | Rely on framework auto-wait; extract named constants |
-| 13 | **Flaky patterns** | `items.nth(2).toContainText('Settings')` | Use `data-testid`, role-based selectors; mock network; wait for animation completion |
-| 14 | **Unused Page Object member** | `clickEdit()` never called by any spec | Delete unused members or make `private`; do not delete actively-used util files |
+| 7 | **Duplicate scenario** | Two tests share 90% of steps; entire spec file is a subset of another | Merge into one comprehensive test; delete zombie spec files |
+| 8 | **Hard-coded sleep** | `waitForTimeout(2000)` / `cy.wait(2000)` | Rely on framework auto-wait; use condition-based waits |
+| 9 | **Flaky test patterns** | `items.nth(2)` without comment; `test.describe.serial()` | Use `data-testid` or attribute selectors; replace serial suites with self-contained tests |
+| 10 | **YAGNI in Page Objects** | `clickEdit()` never called; empty wrapper class with no members | Delete unused members; review empty wrappers (may be intentional) |
 
 ### Review Workflow
 
 Three-phase review with P0/P1/P2 severity:
 
-1. **Phase 1: Automated grep** — mechanically detects error swallowing, always-passing (including `toBeAttached()` on static elements — scans all `.ts` files, not just specs), boolean traps, conditional bypass in specs (POM methods reviewed manually in Phase 2), raw DOM, timeouts, missing network mocks
+1. **Phase 1: Automated grep** — mechanically detects error swallowing, always-passing (including `toBeAttached()` with no comment — scans all `.ts` files, not just specs), conditional bypass in specs (POM methods reviewed manually in Phase 2), raw DOM, explicit sleeps, `force: true` usage, and `describe.serial` ordering
 2. **Phase 2: LLM analysis** — semantic checks for naming, missing assertions, duplicates, flaky patterns, YAGNI
 3. **Phase 3: Coverage gaps** — suggests missing error paths, edge cases, accessibility, and auth boundary tests
 
@@ -190,10 +187,6 @@ Cypress tests pass locally but fail in CI
 **`playwright-debugger`** — Playwright only. Parses `results.json` and `trace.zip` from `playwright-report/`.
 
 **`cypress-debugger`** — Cypress only. Parses `mochawesome.json` or JUnit XML from `cypress/reports/`.
-
-## Key Insight
-
-> AI-generated E2E tests tend toward the statistically likely result — visibility checks that always pass, loose assertions that accept anything, and convenience methods that nobody calls. These skills catch what CI misses: **tests that pass but prove nothing**, and **failures that are hard to trace**.
 
 ## License
 
