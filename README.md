@@ -60,25 +60,30 @@ My tests pass CI but I think they miss regressions
 | 1 | **Name-assertion mismatch** | Name says "status" but only checks `toBeVisible()`; name implies UI toggle but test uses localStorage | Add assertion for status content, or rename to match actual mechanism |
 | 2 | **Missing Then** | Cancel action, verify text restored — input still visible? | Verify both `text.toBeVisible()` and `input.toBeHidden()` |
 | 3 | **Error swallowing** | `try/catch` in spec, `.catch(() => {})` in POM | Let errors fail; remove silent catch from POM methods |
-| 4 | **Always-passing assertion** | `expect(count).toBeGreaterThanOrEqual(0)`, `toBeAttached()` with no comment | `expect(count).toBeGreaterThan(0)`; add comment or replace with `toBeVisible()` |
+| 4 | **Always-passing assertion** | `expect(count).toBeGreaterThanOrEqual(0)`, `toBeAttached()` with no comment, `expect(await el.isVisible()).toBe(true)` | `expect(count).toBeGreaterThan(0)`; add comment or replace with `toBeVisible()` |
 | 5 | **Bypass patterns** | `if (visible) { expect(...) }`; `page.click(sel, { force: true })` without comment | Always assert; move env checks to `beforeEach`; add `// JUSTIFIED:` to force:true |
 | 6 | **Raw DOM queries** | `document.querySelector` in `evaluate()` | Use framework element API (`locator` / `cy.get` / `page.$`) |
+| 7 | **Focused test leak** | `test.only(...)` or `it.only(...)` committed — CI runs one test, silently skips the rest | Delete `.only`; use `--grep` or `--spec` CLI flags for local focus |
 
 #### Tier 2 — P1/P2 (check when time permits)
 
 | # | Pattern | Before | After |
 |---|---------|--------|-------|
-| 7 | **Duplicate scenario** | Two tests share 90% of steps; entire spec file is a subset of another | Merge into one comprehensive test; delete zombie spec files |
-| 8 | **Hard-coded sleep** | `waitForTimeout(2000)` / `cy.wait(2000)` | Rely on framework auto-wait; use condition-based waits |
-| 9 | **Flaky test patterns** | `items.nth(2)` without comment; `test.describe.serial()` | Use `data-testid` or attribute selectors; replace serial suites with self-contained tests |
-| 10 | **YAGNI in Page Objects** | `clickEdit()` never called; empty wrapper class with no members | Delete unused members; review empty wrappers (may be intentional) |
+| 8 | **Flaky test patterns** | `items.nth(2)` without comment; `test.describe.serial()` | Use `data-testid` or attribute selectors; replace serial suites with self-contained tests |
+| 9 | **Hard-coded sleep** | `waitForTimeout(2000)` / `cy.wait(2000)` | Rely on framework auto-wait; use condition-based waits |
+| 10 | **YAGNI + Zombie Specs** | `clickEdit()` never called; empty wrapper class; single-use Util; entire spec file duplicated by another | Delete unused members; inline single-use Util methods; delete zombie spec files |
+
+### References
+
+- [Playwright best practices](https://playwright.dev/docs/best-practices)
+- [Cypress best practices](https://docs.cypress.io/app/core-concepts/best-practices)
 
 ### Review Workflow
 
 Three-phase review with P0/P1/P2 severity:
 
-1. **Phase 1: Automated grep** — mechanically detects error swallowing, always-passing (including `toBeAttached()` with no comment — scans all `.ts` files, not just specs), conditional bypass in specs (POM methods reviewed manually in Phase 2), raw DOM, explicit sleeps, `force: true` usage, and `describe.serial` ordering
-2. **Phase 2: LLM analysis** — semantic checks for naming, missing assertions, duplicates, flaky patterns, YAGNI
+1. **Phase 1: Automated grep** — mechanically detects error swallowing, always-passing (including `toBeAttached()` and `isVisible()` boolean trap — scans all `.ts` files, not just specs), `test.only` / `it.only` leak, conditional bypass in specs (POM methods reviewed manually in Phase 2), raw DOM, explicit sleeps, `force: true` usage, and `describe.serial` ordering
+2. **Phase 2: LLM analysis** — semantic checks for naming, missing assertions, flaky patterns, YAGNI + zombie specs
 3. **Phase 3: Coverage gaps** — suggests missing error paths, edge cases, accessibility, and auth boundary tests
 
 ---

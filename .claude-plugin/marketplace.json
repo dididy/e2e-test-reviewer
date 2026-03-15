@@ -7,8 +7,8 @@
     {
       "name": "e2e-skills",
       "source": "./",
-      "description": "Three E2E skills that catch what CI misses — tests that pass but prove nothing, and failures that are hard to trace. Audits Playwright, Cypress, and Puppeteer specs against 10 anti-patterns (P0/P1/P2), debugs failed Playwright tests from playwright-report/, and Cypress tests from cypress/reports/.",
-      "version": "1.0.0",
+      "description": "Three E2E skills that catch what CI misses — tests that pass but prove nothing, and failures that are hard to trace. Audits Playwright, Cypress, and Puppeteer specs against 10 anti-patterns (P0/P1/P2) including focused test leaks and zombie spec files, debugs failed Playwright tests from playwright-report/, and Cypress tests from cypress/reports/.",
+      "version": "1.0.1",
       "author": {
         "name": "YONGJAE LEE"
       },

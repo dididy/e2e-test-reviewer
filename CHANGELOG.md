@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.0.1] - 2026-03-15
+
+### Added
+- **`e2e-reviewer` References**: Added Playwright and Cypress best-practices links at top of SKILL.md.
+- **`e2e-reviewer` #4 Always-Passing — `isVisible()` boolean trap**: Added `expect(await.*\.isVisible\(\))` as a new grep-detectable variant. `isVisible()` resolves a one-shot boolean with no auto-retry; a transiently absent element can cause a silent pass. Rule extended to flag these and direct to `expect(locator).toBeVisible()` (web-first, auto-retries). Fix line and Quick Reference Detection Signal updated accordingly.
+- **`e2e-reviewer` #7 Focused Test Leak** (new check, P0, grep): `test.only` / `it.only` / `describe.only` committed to source silently skips the entire suite in CI — all other tests show as "not run" but the step passes. No `// JUSTIFIED:` exemption. Pattern: `\.(only)\(` in spec files. Added to Phase 1 grep, Tier 1 section, and Quick Reference.
+- **`e2e-reviewer` #8a Positional selectors — selector priority ranking**: Added one-line selector priority guide. Priority order (best → worst): `data-testid`/`data-cy` → role/label → `name` attr → `id` → class → generic. Class and generic selectors are "Never."
+
+### Changed
+- **`e2e-reviewer` Duplicate Scenarios removed**: Dropped the fuzzy per-test 70% overlap check — subjective threshold, expensive cross-file comparison, high false positive rate. Zombie spec file detection (entire file covered by another) absorbed into #10 YAGNI as sub-pattern 10b.
+- **`e2e-reviewer` Renumbered to 10 checks**: #7 Focused Test Leak inserted (Tier 1, P0); Flaky Test Patterns (P1) reordered before Hard-coded Sleeps (P2). Final order: #1–#7 Tier 1, #8 Flaky, #9 Hard-coded Sleeps, #10 YAGNI.
+- **`e2e-reviewer` #10 YAGNI expanded**: Added sub-pattern 10b zombie spec files + single-use Util wrapper rule (2+ threshold). Section renamed to "YAGNI — Dead Test Code."
+- **`e2e-reviewer` Suppression rule**: `// JUSTIFIED:` now suppresses on the **line above** the flagged pattern instead of on the same line. Updated across all grep-checked patterns (#3, #4, #5, #8 partial, #9). Exception: #7 Focused Test Leak has no `// JUSTIFIED:` exemption.
+- **`e2e-reviewer` #8b Serial**: Added explicit note that `// JUSTIFIED:` on the line above suppresses the `describe.serial` flag.
+- **`e2e-reviewer` #6 Raw DOM Queries**: Simplified code examples — redundant BAD example removed; "Why it matters" moved above the code block.
+- **`e2e-reviewer` frontmatter description**: Updated to reflect 10 checks, zombie spec files, and focused test leak.
+
 ## [1.0.0] - 2026-03-14
 
 ### Added
