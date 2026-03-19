@@ -76,25 +76,20 @@ When no argument is given:
 
 **Navigation target:** `<baseURL>/<target-path>` from the project profile (Step 1) + selected route (Step 2). If the page requires authentication, open the login page first, authenticate, then navigate to the target.
 
-Use **Playwright CLI** as the primary exploration tool:
-
-> **Dependency check:** If `playwright-cli` is not installed, install it first:
-> ```bash
-> npm install -g @playwright/cli
-> ```
-> If installation fails or is not permitted, skip to the agent-browser fallback below.
+Use **agent-browser tools** as the primary exploration method:
 
 ```
-1. playwright-cli open <target-URL>
-2. playwright-cli snapshot --output /tmp/pw-snapshot.yaml
-3. Read /tmp/pw-snapshot.yaml → identify interactive elements (do NOT paste raw content into responses)
-4. For each key interaction (button click, form fill, modal open, nav link):
-   a. playwright-cli click <element-ref> / playwright-cli fill <element-ref> <value> / etc.
-   b. playwright-cli snapshot --output /tmp/pw-snapshot-<n>.yaml → capture resulting state
-5. playwright-cli close
+1. browser_navigate <target-URL>
+2. browser_snapshot → identify interactive elements (do NOT paste raw content into responses)
+3. For each key interaction (button click, form fill, modal open, nav link):
+   a. browser_click / browser_type / browser_fill_form / browser_select_option
+   b. browser_snapshot → capture resulting state
+4. browser_close
 ```
 
-If Playwright CLI is unavailable, fall back to agent-browser tools (`browser_navigate`, `browser_snapshot`, `browser_click`, `browser_type`, `browser_close`).
+**Reference only — do not use as primary:** `npx playwright codegen <URL>` launches an interactive browser recorder. It is useful for manually discovering selectors during development but cannot be automated in an agent pipeline.
+
+If agent-browser tools are unavailable, use `npx playwright codegen <URL>` manually and paste discovered selectors into the Locator Mapping Table in Step 4.
 
 **Snapshot handling:** Extract element roles, labels, testids, and visible text from snapshot output. Summarize findings — do NOT paste raw YAML into responses.
 

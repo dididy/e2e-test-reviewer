@@ -1,20 +1,20 @@
-# e2e-skills
+# e2e-skills — Playwright & Cypress E2E Test Generation, Review, and Debugging for Claude Code
 
-A [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview) plugin with four complementary E2E testing skills designed to work together:
+E2E tests that always pass are worse than no tests — they give false confidence while real bugs slip through. This [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview) plugin catches what CI misses: **tests that pass but prove nothing**, and **failures that are hard to trace**.
+
+Four complementary skills that cover the full E2E lifecycle:
 
 1. **`playwright-test-generator`** — generates Playwright E2E tests from scratch, from coverage gap analysis to passing, reviewed tests
-2. **`e2e-reviewer`** — finds issues in your tests and suggests fixes (Playwright, Cypress, Puppeteer)
-3. **`playwright-debugger`** — diagnoses failures from `playwright-report/` after you apply fixes and re-run
-4. **`cypress-debugger`** — diagnoses failures from Cypress report files after you apply fixes and re-run
+2. **`e2e-reviewer`** — static analysis of existing Playwright, Cypress, and Puppeteer specs; finds 11 anti-patterns that make tests pass CI while missing real regressions
+3. **`playwright-debugger`** — diagnoses failures from `playwright-report/` and classifies root causes (flaky timing, selector drift, auth, environment mismatch, and more)
+4. **`cypress-debugger`** — same for Cypress report files
 
-The typical workflow:
+### Workflow
 
-1. Run `playwright-test-generator` → generate tests with user approval → auto-reviewed by `e2e-reviewer`
-2. If generated tests fail → `playwright-debugger` is invoked automatically after 3 fix attempts
-3. For existing tests: run `e2e-reviewer` → fix issues → re-run tests
-4. If tests fail → run `playwright-debugger` or `cypress-debugger` → fix → re-run tests
-
-> AI-generated E2E tests tend toward the statistically likely result — visibility checks that always pass, loose assertions that accept anything, and convenience methods that nobody calls. These skills catch what CI misses: **tests that pass but prove nothing**, and **failures that are hard to trace**.
+1. Run `playwright-test-generator` → generate with approval → auto-reviewed by `e2e-reviewer`
+2. Generated tests fail → `playwright-debugger` invoked automatically after 3 fix attempts
+3. Existing tests: `e2e-reviewer` → fix → re-run
+4. Tests fail → `playwright-debugger` or `cypress-debugger` → fix → re-run
 
 ## Installation
 
@@ -35,7 +35,7 @@ git clone https://github.com/dididy/e2e-skills.git ~/.claude/skills/e2e-skills
 
 ## Skill 1: `playwright-test-generator` — Test Generation
 
-Generates Playwright E2E tests from scratch for any project. Starts from coverage gap analysis, explores the live app via Playwright CLI, designs scenarios with your approval, and auto-reviews generated tests with `e2e-reviewer`.
+Generates Playwright E2E tests from scratch for any project. Starts from coverage gap analysis, explores the live app via agent-browser tools, designs scenarios with your approval, and auto-reviews generated tests with `e2e-reviewer`.
 
 ### When to Use
 
@@ -57,7 +57,7 @@ Add playwright coverage for checkout flow
 ```
 Step 1: Detect environment (config, baseURL, test dir, POM structure)
 Step 2: Coverage gap analysis → user picks target
-Step 3: Live browser exploration via Playwright CLI
+Step 3: Live browser exploration via agent-browser tools
 Step 4: Scenario design → Plan Mode → user approves
 Step 5: Code generation (POM + spec or flat spec, auto-detected)
 Step 6: YAGNI audit + e2e-reviewer quality gate
@@ -80,41 +80,46 @@ Catches issues in E2E tests that pass CI but fail to catch real regressions.
 
 ### When to Use
 
-- Your tests always pass but you suspect they don't catch real bugs
-- You want to audit test quality before a release
+- Your tests always pass but bugs still slip through to production
+- Tests pass CI but you suspect they miss real regressions
+- Your test suite is fragile — tests break on every UI change
+- You want to audit test quality before a release or code review
 - You're reviewing Playwright, Cypress, or Puppeteer specs
-- You need to justify test coverage in a code review
 
 ### Usage
 
 ```
-Review these E2E tests for quality
+Review my E2E tests
 Audit the spec files in tests/
-Are there any always-passing tests?
-My tests pass CI but I think they miss regressions
+Find weak tests in my test suite
+My tests always pass but miss bugs
+Tests pass CI but miss regressions
+My tests are fragile and break on every UI change
+We have coverage but bugs still slip through
 ```
 
-### 10 Patterns Detected
+### 11 Patterns Detected
 
 #### Tier 1 — P0/P1 (always check)
 
 | # | Pattern | Before | After |
 |---|---------|--------|-------|
-| 1 | **Name-assertion mismatch** | Name says "status" but only checks `toBeVisible()`; name implies UI toggle but test uses localStorage | Add assertion for status content, or rename to match actual mechanism |
-| 2 | **Missing Then** | Cancel action, verify text restored — input still visible? | Verify both `text.toBeVisible()` and `input.toBeHidden()` |
+| 1 | **Name-assertion mismatch** | Name says "status" but only checks `toBeVisible()` | Add assertion for status content, or rename to match actual check |
+| 2 | **Missing Then** | Cancel action, verify text restored — but input still visible? | Verify both restored state and dismissed state |
 | 3 | **Error swallowing** | `try/catch` in spec, `.catch(() => {})` in POM | Let errors fail; remove silent catch from POM methods |
-| 4 | **Always-passing assertion** | `expect(count).toBeGreaterThanOrEqual(0)`, `toBeAttached()` with no comment, `expect(await el.isVisible()).toBe(true)`, `expect(await el.isDisabled()).toBe(true)` (no retry), `toBeDefined()` on nullable / `not.toBeNull()` on potentially-empty string | `expect(count).toBeGreaterThan(0)`; `toBeVisible()` / `toBeDisabled()` (web-first); `not.toBeNull()` when null is the only invalid case; `toBeTruthy()` when empty string is also invalid |
-| 5 | **Bypass patterns** | `if (visible) { expect(...) }`; `page.click(sel, { force: true })` without comment | Always assert; move env checks to `beforeEach`; add `// JUSTIFIED:` to force:true |
+| 4 | **Always-passing assertion** | `toBeGreaterThanOrEqual(0)`; `toBeAttached()` with no comment; `expect(await el.isVisible()).toBe(true)` (one-shot); `expect(await el.textContent()).toBe(x)` (one-shot); `expect(locator).toBeTruthy()` (Locator always truthy); `{ timeout: 0 }` on assertions (disables retry) | `toBeGreaterThan(0)`; `toBeVisible()`; web-first assertions with auto-retry |
+| 5 | **Bypass patterns** | `if (await el.isVisible()) { expect(...) }`; `{ force: true }` without comment | Always assert; move env checks to `beforeEach`; add `// JUSTIFIED:` to force:true |
 | 6 | **Raw DOM queries** | `document.querySelector` in `evaluate()` | Use framework element API (`locator` / `cy.get` / `page.$`) |
-| 7 | **Focused test leak** | `test.only(...)` or `it.only(...)` committed — CI runs one test, silently skips the rest | Delete `.only`; use `--grep` or `--spec` CLI flags for local focus |
+| 7 | **Focused test leak** | `test.only(...)` committed — CI runs one test, silently skips the rest | Delete `.only`; use `--grep` or `--spec` for local focus |
+| 8 | **Missing assertion** | `await page.locator('.x');` (discarded); `await el.isVisible();` (boolean thrown away) | Add `await expect(locator).toBeVisible()` or delete the line |
 
 #### Tier 2 — P1/P2 (check when time permits)
 
 | # | Pattern | Before | After |
 |---|---------|--------|-------|
-| 8 | **Flaky test patterns** | `items.nth(2)` without comment; `test.describe.serial()` | Use `data-testid` or attribute selectors; replace serial suites with self-contained tests |
 | 9 | **Hard-coded sleep** | `waitForTimeout(2000)` / `cy.wait(2000)` | Rely on framework auto-wait; use condition-based waits |
-| 10 | **YAGNI + Zombie Specs** | `clickEdit()` never called; empty wrapper class; single-use Util; entire spec file duplicated by another | Delete unused members; inline single-use Util methods; delete zombie spec files |
+| 10 | **Flaky test patterns** | `items.nth(2)` without comment; `test.describe.serial()` | Use `data-testid` or role selectors; replace serial with self-contained tests |
+| 11 | **YAGNI + Zombie Specs** | `clickEdit()` never called; empty wrapper class; single-use Util; entire spec duplicated by another | Delete unused members; inline single-use Util methods; delete zombie spec files |
 
 ### References
 
@@ -125,8 +130,8 @@ My tests pass CI but I think they miss regressions
 
 Three-phase review with P0/P1/P2 severity:
 
-1. **Phase 1: Automated grep** — mechanically detects error swallowing, always-passing (including `toBeAttached()` and `isVisible()` boolean trap — scans all `.ts` files, not just specs), `test.only` / `it.only` leak, conditional bypass in specs (POM methods reviewed manually in Phase 2), raw DOM, explicit sleeps, `force: true` usage, and `describe.serial` ordering
-2. **Phase 2: LLM analysis** — semantic checks for naming, missing assertions, flaky patterns, YAGNI + zombie specs
+1. **Phase 1: Automated grep** — mechanically detects #3 (POM `.catch()`), #4 (always-passing: one-shot booleans, Locator-as-truthy, toBeAttached, timeout:0), #5 (bypass patterns), #6 (raw DOM queries), #7 (focused test leak), #8 (missing assertions: dangling locators + discarded booleans), #9 (hard-coded sleeps), #10 partial (positional selectors, describe.serial)
+2. **Phase 2: LLM analysis** — #1 name-assertion alignment, #2 missing Then, #3 `try/catch` in specs (context-dependent), #8 Cypress dangling selectors, #10 flaky pattern judgment, #11 YAGNI + zombie specs
 3. **Phase 3: Coverage gaps** — suggests missing error paths, edge cases, accessibility, and auth boundary tests
 
 ---
@@ -230,7 +235,7 @@ Cypress tests pass locally but fail in CI
 
 ## Compatibility
 
-**`playwright-test-generator`** — Playwright only. Generates tests for any project with a `playwright.config.ts`. Requires Playwright CLI or agent-browser tools for live exploration.
+**`playwright-test-generator`** — Playwright only. Generates tests for any project with a `playwright.config.ts`. Uses agent-browser tools for live exploration; falls back to `npx playwright codegen` for manual selector discovery.
 
 **`e2e-reviewer`** — Framework-agnostic. Covers [Playwright](https://playwright.dev/), [Cypress](https://www.cypress.io/), and [Puppeteer](https://pptr.dev/).
 

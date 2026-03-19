@@ -1,6 +1,6 @@
 ---
 name: e2e-reviewer
-description: Use when reviewing, auditing, or improving E2E test specs for Playwright, Cypress, or Puppeteer — static code analysis of existing test files, not diagnosing runtime failures. Triggers on "review my tests", "audit test quality", "find weak tests", "my tests always pass but miss bugs", "tests pass CI but miss regressions", "improve playwright tests", "improve cypress tests", "check test coverage gaps", "my tests are fragile", "tests break on every UI change", "test suite is hard to maintain", "we have coverage but bugs still slip through". Detects 10 anti-patterns -- name-assertion mismatch, missing Then, error swallowing, always-passing assertions, bypass patterns (conditional assertions + force:true), raw DOM queries, focused test leak (test.only committed), flaky test patterns (positional selectors + serial ordering), hard-coded sleeps, and YAGNI + zombie specs (unused POM members, single-use Util wrappers, zombie spec files).
+description: Use when reviewing, auditing, or improving E2E test specs for Playwright, Cypress, or Puppeteer — static code analysis of existing test files, not diagnosing runtime failures. Triggers on "review my tests", "audit test quality", "find weak tests", "my tests always pass but miss bugs", "tests pass CI but miss regressions", "improve playwright tests", "improve cypress tests", "check test coverage gaps", "my tests are fragile", "tests break on every UI change", "test suite is hard to maintain", "we have coverage but bugs still slip through". Detects 11 anti-patterns -- name-assertion mismatch, missing Then, error swallowing (.catch in POM via grep; try/catch in specs via LLM), always-passing assertions (one-shot booleans, Locator-as-truthy, toBeAttached, timeout:0), bypass patterns (conditional assertions + force:true), raw DOM queries, focused test leak (test.only committed), missing assertions (dangling locators + boolean result discarded), hard-coded sleeps (P1), flaky test patterns (positional selectors + serial ordering), and YAGNI + zombie specs (unused POM members, single-use Util wrappers, zombie spec files).
 ---
 
 # E2E Test Scenario Quality Review
@@ -17,13 +17,28 @@ Once the review target files are determined, use the Grep tool to mechanically d
 
 **What each check detects:**
 
-- **#3 Error Swallowing** — `.catch(() => {})` or `.catch(() => false)` silently hides failures. Search `.ts/.js/.cy.*` for `\.catch\(\s*(async\s*)?\(\)\s*=>`, excluding `node_modules` and lines with `// JUSTIFIED` on the line above.
-- **#4 Always-Passing** — assertions that can never fail. Search for `toBeGreaterThanOrEqual(0)` or `should.*(gte|greaterThan).*0`. Also search `.ts/.js/.cy.*` (including POM/util files, not just specs) for `toBeAttached()` — flag every hit unless `// JUSTIFIED:` appears on the line above. Also search `.spec.*/.test.*/.cy.*` for `expect\(await.*\.isVisible\(\)\)` — one-shot boolean with no auto-retry; flag unless `// JUSTIFIED:` is on the line above. Also search for `expect\(await.*\.(isDisabled|isEnabled|isChecked|isHidden)\(\)\)` — same one-shot boolean problem; use web-first assertions (`toBeDisabled()`, `toBeEnabled()`, etc.) instead. Also flag `toBeDefined()` or `not\.toBeNull\(\)` on values that should be non-empty strings or positive numbers — `toBeDefined()` passes for `null`, `not.toBeNull()` passes for `""` or `0`; use `toMatch(/\S/)` or `toBeGreaterThan(0)` instead.
-- **#5 Bypass Patterns** — two sub-patterns that suppress what the framework would normally catch: (a) `expect()` inside `if(isVisible)` silently skips assertions — search `.spec.*/.test.*/.cy.*` for `if.*(isVisible|is\(.*:visible.*\))`; (b) `{ force: true }` bypasses actionability checks (visibility, enabled state) — search `.ts/.js/.cy.*` for `force:\s*true`. Exclude lines where `// JUSTIFIED` appears on the line above. **Note:** The `if(isVisible)` grep covers spec files only — review POM helper methods manually in Phase 2.
+- **#3 Error Swallowing** — `.catch(() => {})` or `.catch(() => false)` in POM/spec silently hides failures. Search `.ts/.js/.cy.*` for `\.catch\(\s*(async\s*)?\(\)\s*=>`, excluding `node_modules` and lines with `// JUSTIFIED:` on the line above. `try/catch` wrapping in spec files requires LLM judgment (Phase 2) — too many legitimate uses to grep reliably.
+
+- **#4 Always-Passing** — assertions that can never fail. Run these greps:
+  1. `toBeGreaterThanOrEqual(0)` or `should.*(gte|greaterThan).*0` — mathematically always true
+  2. `toBeAttached\(\)` in `.ts/.js/.cy.*` — flag every hit; confirm in Phase 2 whether the element can ever be absent from the DOM (if unconditionally rendered → P0 vacuous assertion; if `// JUSTIFIED:` explains CSS-hidden use → skip)
+  3. `expect\(await.*\.isVisible\(\)\)` in spec files — one-shot boolean, no auto-retry
+  4. `expect\(await.*\.(isDisabled|isEnabled|isChecked|isHidden)\(\)\)` in spec files — same one-shot boolean problem
+  5. `expect\(await.*\.(textContent|innerText|getAttribute|inputValue)\(\)\)` in spec files — resolves immediately with no retry; use `toHaveText()`, `toHaveAttribute()`, `toHaveValue()`
+  6. `\.toBeTruthy\(\)` on a Locator subject (e.g., `expect(page.locator(...)).toBeTruthy()`) — Locator objects are always truthy JS objects regardless of element existence
+  7. `timeout:\s*0` as an assertion option (e.g., `toHaveCount(0, { timeout: 0 })`) — disables auto-retry entirely; flag unless `// JUSTIFIED:` on the line above
+
+- **#5 Bypass Patterns** — two sub-patterns that suppress what the framework would normally catch: (a) `expect()` inside `if(isVisible)` silently skips assertions — search `.spec.*/.test.*/.cy.*` for `if.*(isVisible|is\(.*:visible.*\))`; (b) `{ force: true }` bypasses actionability checks (visibility, enabled state) — search `.ts/.js/.cy.*` for `force:\s*true`. Exclude lines where `// JUSTIFIED:` appears on the line above. **Note:** The `if(isVisible)` grep covers spec files only — review POM helper methods manually in Phase 2.
+
 - **#6 Raw DOM Queries** — `document.querySelector` bypasses framework auto-wait. Search `.spec.*/.test.*/.cy.*` for `document\.querySelector` (covers both `evaluate()` and `waitForFunction()`).
+
 - **#7 Focused Test Leak** — `test.only` / `it.only` / `describe.only` committed to source silently skips the rest of the suite in CI. Search `.spec.*/.test.*/.cy.*` for `\.(only)\(`. No `// JUSTIFIED:` exemption — there are zero legitimate committed uses; remove before committing.
-- **#8 Flaky Test Patterns (partial)** — two sub-patterns that cause CI instability: (a) positional selectors `nth()`, `first()`, `last()` without explanation — search `.spec.*/.test.*/.cy.*` for `\.nth\(|\.first\(\)|\.last\(\)`; (b) `test.describe.serial()` creates order-dependent tests that break parallel sharding `[Playwright only]` — search `.spec.*/.test.*` for `\.describe\.serial\(`. Exclude lines where `// JUSTIFIED` appears on the line above.
+
+- **#8 Missing Assertion** — two sub-patterns where no assertion ever occurs: (a) Dangling locator `[Playwright only]` — a locator created as a standalone statement, not assigned, not passed to `expect()`, not chained with an action; search `.spec.*/.test.*` for lines where `page\.locator\(|page\.getBy` is the entire expression; (b) Boolean result discarded — `isVisible()` / `isEnabled()` / `isChecked()` / `isDisabled()` / `isEditable()` awaited as a standalone statement, boolean thrown away; search `.spec.*/.test.*/.cy.*` for `^\s*await .*\.(isVisible|isEnabled|isChecked|isDisabled|isEditable|isHidden)\(\)\s*;`. Flag every hit for both. Exclude lines where `// JUSTIFIED:` appears on the line above. For Cypress dangling selectors (`cy.get(...)` as a standalone statement), check manually in Phase 2.
+
 - **#9 Hard-coded Sleeps** — explicit sleeps cause flakiness. Search `.ts/.js/.cy.*` for `waitForTimeout` or `cy\.wait\(\d`.
+
+- **#10 Flaky Test Patterns (partial)** — two sub-patterns that cause CI instability: (a) positional selectors `nth()`, `first()`, `last()` without explanation — search `.spec.*/.test.*/.cy.*` for `\.nth\(|\.first\(\)|\.last\(\)`; (b) `test.describe.serial()` creates order-dependent tests that break parallel sharding `[Playwright only]` — search `.spec.*/.test.*` for `\.describe\.serial\(`. Exclude lines where `// JUSTIFIED:` appears on the line above.
 
 **Interpreting results:**
 - Zero hits → no mechanical issues found, proceed to Phase 2
@@ -36,15 +51,17 @@ Once the review target files are determined, use the Grep tool to mechanically d
 
 ## Phase 2: LLM Review (Subjective Checks Only)
 
-Patterns already detected in Phase 1 (#3, #4, #5, #6, #7, #8 partial, #9) are **skipped**.
+Patterns already detected in Phase 1 (#3 partial, #4, #5, #6, #7, #8, #9, #10 partial) are **skipped**.
 The LLM performs only these checks:
 
 | # | Check | Reason |
 |---|-------|--------|
 | 1 | Name-Assertion Alignment | Requires semantic interpretation |
 | 2 | Missing Then | Requires logic flow analysis |
-| 8 | Flaky Test Patterns | Requires context judgment for nth() and serial ordering |
-| 10 | YAGNI in POM + Zombie Specs | Requires usage grep then judgment |
+| 3 | Error Swallowing — `try/catch` in specs | Too many legitimate non-test uses; requires reading context |
+| 8 | Missing Assertion — Cypress dangling selectors | `cy.get(...)` standalone requires manual check |
+| 10 | Flaky Test Patterns | Requires context judgment for nth() and serial ordering |
+| 11 | YAGNI in POM + Zombie Specs | Requires usage grep then judgment |
 
 ---
 
@@ -73,7 +90,7 @@ After completing Phase 1 + 2, identify scenarios the test suite does NOT cover. 
 
 Run each check against every **non-skipped** test and every **changed POM file**.
 
-**Important:** `test.skip()` with a reason comment or reason string is intentional — do NOT flag or remove these. Only flag mid-test conditional skips that hide failures (see #5).
+**Important:** `test.skip()` with a reason comment or reason string is intentional — do NOT flag or remove these. Only flag assertions gated behind a runtime `if` check that cause the test to pass silently (see #5a).
 
 ---
 
@@ -85,7 +102,7 @@ Run each check against every **non-skipped** test and every **changed POM file**
 
 ```typescript
 // BAD — name says "status" but only checks visibility
-test('should display user status', () => {
+test('should display user status', async ({ page }) => {
   await expect(status).toBeVisible();  // no status content check
 });
 ```
@@ -105,7 +122,7 @@ test('should display user status', () => {
 
 ```typescript
 // BAD — toggles but doesn't verify the dismissed state
-test('should cancel edit on Escape', () => {
+test('should cancel edit on Escape', async ({ page }) => {
   await input.click();
   await page.keyboard.press('Escape');
   await expect(text).toBeVisible();
@@ -122,24 +139,24 @@ test('should cancel edit on Escape', () => {
 
 **Common patterns:** Cancel/Escape without verifying input is hidden, delete without verifying count decreased, submit without verifying form resets, tab switch without verifying previous tab content is hidden.
 
-#### 3. Error Swallowing `[grep-detectable]`
+#### 3. Error Swallowing `[grep-detectable + LLM]`
 
-**Symptom (spec):** `try/catch` wrapping assertions — test passes on error.
+**Symptom (POM — grep):** `.catch(() => {})` or `.catch(() => false)` on awaited operations — caller never sees the failure.
 
-**Symptom (POM):** `.catch(() => {})` or `.catch(() => false)` on awaited operations — caller never sees the failure.
+**Symptom (spec — LLM):** `try/catch` wrapping assertions — test passes on error instead of failing.
 
 ```typescript
-// BAD spec — silent pass
-try { await expect(header).toBeVisible(); }
-catch { console.log('skipped'); }
-
 // BAD POM — caller thinks execution succeeded
 await loadingSpinner.waitFor({ state: 'detached' }).catch(() => {});
+
+// BAD spec — silent pass on assertion failure
+try { await expect(header).toBeVisible(); }
+catch { console.log('skipped'); }
 ```
 
-**Rule (spec):** Never wrap assertions in try/catch. Use `test.skip()` in `beforeEach` if the test can't run.
-
 **Rule (POM):** Remove `.catch(() => {})` / `.catch(() => false)` from wait/assertion methods. If the operation can legitimately fail, the caller should decide how to handle it. Only keep catch for UI stabilization like `input.click({ force: true }).catch(() => textarea.focus())`.
+
+**Rule (spec):** Never wrap assertions in `try/catch`. Use `test.skip()` in `beforeEach` if the test can't run. `try/catch` in non-assertion code (setup, teardown, optional cleanup) is fine — LLM must read context before flagging.
 
 #### 4. Always-Passing Assertions `[grep-detectable + LLM confirmation]`
 
@@ -149,35 +166,37 @@ await loadingSpinner.waitFor({ state: 'detached' }).catch(() => {});
 // BAD — count >= 0 is always true
 expect(count).toBeGreaterThanOrEqual(0);
 
-// SUSPECT — element may always be in DOM; needs review
-await expect(page.locator('.app-shell')).toBeAttached();
+// BAD — element always present in DOM; assertion never fails
+await expect(page.locator('header')).toBeAttached();
 
-// SUSPECT — boolean resolves immediately, no auto-retry
-const visible = await page.getByText('welcome').isVisible();
-expect(visible).toBe(true);
+// BAD — one-shot boolean, no auto-retry
+expect(await el.isVisible()).toBe(true);
+expect(await el.textContent()).toBe('expected text');
+expect(await el.getAttribute('attr')).toBe('value');
+
+// BAD — Locator is always a truthy JS object regardless of element existence
+expect(page.locator('.selector')).toBeTruthy();
+
+// BAD — disables auto-retry entirely
+await expect(el).toHaveCount(0, { timeout: 0 });
 ```
 
-**Rule:** Search for `toBeGreaterThanOrEqual(0)` and `toBeAttached()`. Also flag `expect(await.*\.isVisible\(\))` — these resolve a one-shot boolean with no retry; use `expect(locator).toBeVisible()` instead (web-first, auto-retries). For `toBeAttached()` hits with no `// JUSTIFIED:` on the line above, confirm whether the element can ever be absent from the DOM. If it is unconditionally rendered or always present in the static HTML shell, the assertion is vacuous → flag P0. If `// JUSTIFIED:` explains the element is intentionally CSS-hidden (`visibility:hidden`, not `display:none`), skip.
+**Rule:** `toBeAttached()` on an unconditionally rendered element (always in the static HTML shell) is vacuous → P0. The only legitimate use is asserting that an element exists in the DOM but is CSS-hidden (`visibility:hidden`, not `display:none`) — add `// JUSTIFIED: visibility:hidden` in that case.
 
-Also flag **assertion weakening** — replacing `toBeTruthy()` with a weaker matcher silently reduces what the assertion catches:
-- `toBeDefined()` passes for `null` — use `not.toBeNull()` for nullable references, or `toBeTruthy()` if the value must also be non-empty
-- `not.toBeNull()` passes for `""` — for values that must be non-empty strings (OAuth codes, secrets, slugs), use `toBeTruthy()`
-
-```typescript
-// BAD — passes for null
-expect(user.username).toBeDefined();
-
-// BAD — passes for ""
-expect(token).not.toBeNull();
-```
-
-**Fix:** Replace `toBeGreaterThanOrEqual(0)` with `toBeGreaterThan(0)`. Replace vacuous `toBeAttached()` with `toBeVisible()`, or remove if other assertions already cover the element. `expect(await el.isVisible()).toBe(true)` → `await expect(el).toBeVisible()`. For nullable values: use `not.toBeNull()` when `null` is the sole invalid case; use `toBeTruthy()` when empty string is also invalid.
+**Fix:**
+- `toBeGreaterThanOrEqual(0)` → `toBeGreaterThan(0)`
+- `toBeAttached()` → `toBeVisible()`, or remove if other assertions cover the element
+- `expect(await el.isVisible()).toBe(true)` → `await expect(el).toBeVisible()`
+- `expect(await el.textContent()).toBe(x)` → `await expect(el).toHaveText(x)`
+- `expect(await el.getAttribute('x')).toBe(y)` → `await expect(el).toHaveAttribute('x', y)`
+- `expect(locator).toBeTruthy()` → `await expect(locator).toBeVisible()`
+- `{ timeout: 0 }` on assertions → remove unless preceded by an explicit wait; add `// JUSTIFIED:` if intentional
 
 #### 5. Bypass Patterns `[grep-detectable]`
 
 Two sub-patterns that suppress what the framework would normally catch — making tests pass when they should fail.
 
-**5a. Conditional assertion bypass** — `expect()` inside `if` block or mid-test `test.skip()`.
+**5a. Conditional assertion bypass** — `expect()` gated behind a runtime `if` check. If the condition is false, no assertion runs and the test passes vacuously.
 
 ```typescript
 // BAD — if spinner never appears, assertion never runs
@@ -186,7 +205,7 @@ if (await spinner.isVisible()) {
 }
 ```
 
-**Rule:** Every test path must contain at least one `expect()`. Move environment checks to `beforeEach` or declaration-level `test.skip()`.
+**Rule:** Every test path must contain at least one unconditional `expect()`. Move environment- or feature-flag checks to `beforeEach` / declaration-level `test.skip()` so the test is skipped entirely rather than passing silently.
 
 **5b. Force true bypass** — `{ force: true }` skips actionability checks (visibility, enabled state, pointer-events), hiding real UX problems that real users would encounter.
 
@@ -230,42 +249,76 @@ describe.only('auth flow', () => { ... });
 
 **Fix:** Delete the `.only` modifier. If the test is intentionally isolated, use `test.skip()` with a reason on the others, or run a single file via the CLI (`--grep` / `--spec`).
 
+#### 8. Missing Assertion `[grep-detectable]`
+
+Two sub-patterns where no assertion ever occurs — the test executes code but verifies nothing.
+
+**8a. Dangling locator** `[Playwright grep / Cypress LLM]` — a locator created as a standalone statement, not assigned to a variable, not passed to `expect()`, and not chained with an action. The statement is a complete no-op.
+
+```typescript
+// BAD — locator created and immediately discarded
+await page.locator('.selector');
+page.getByRole('button'); // also bad — not even awaited
+```
+
+**8b. Boolean result discarded** — `isVisible()` / `isEnabled()` / `isChecked()` / `isDisabled()` / `isEditable()` awaited as a standalone statement. The boolean resolves and is thrown away.
+
+```typescript
+// BAD — boolean computed but never checked; asserts nothing
+await el.isVisible();
+await el.isEnabled();
+```
+
+**Rule:** Every locator expression and every boolean state call must either feed into `expect()`, be assigned and used later, or be chained with an action. Standalone expressions are always bugs.
+
+**Fix:** Replace with web-first assertion — `await expect(locator).toBeVisible()` / `toBeEnabled()` etc. These also auto-retry. Or delete the line if it's leftover debug code.
+
 ---
 
 ### Tier 2 — P1/P2 (check when time permits)
 
-#### 8. Flaky Test Patterns `[LLM-only + grep]`
+#### 9. Hard-coded Sleeps `[grep-detectable]`
+
+**Symptom:** Explicit sleep calls pause execution for a fixed duration instead of waiting for a condition.
+
+```typescript
+// BAD — arbitrary delay; still races if render takes longer
+await page.waitForTimeout(2000);
+cy.wait(1000);
+
+// GOOD — wait for condition
+await expect(modal).toBeVisible();
+cy.get('[data-testid="modal"]').should('be.visible');
+```
+
+**Rule:** Never use explicit sleep (`waitForTimeout` / `cy.wait(ms)`) — rely on framework auto-wait or condition-based waits.
+
+Note: `timeout` option values in `waitFor({ timeout: N })` or `toBeVisible({ timeout: N })` are NOT flagged — these are bounds, not sleeps.
+
+#### 10. Flaky Test Patterns `[LLM-only + grep]`
 
 Two sub-patterns that cause tests to fail intermittently in CI or parallel runs.
 
-**8a. Positional selectors** — `nth()`, `first()`, `last()` without a comment break when DOM order changes.
+**10a. Positional selectors** — `nth()`, `first()`, `last()` without a comment break when DOM order changes.
 
 ```typescript
 // BAD — breaks if DOM order changes
-await expect(items.nth(2)).toContainText('Settings');
+await expect(items.nth(2)).toContainText('expected text');
 ```
 
 **Rule:** Prefer `data-testid`, role-based, or attribute selectors. If `nth()` is unavoidable, add `// JUSTIFIED:` explaining why.
 
 **Selector priority** (best → worst): `data-testid`/`data-cy` → role/label → `name` attr → `id` → class → generic. Class and generic selectors are "Never" — coupled to CSS and DOM structure.
 
-**8b. Serial test ordering** `[Playwright only]` — `test.describe.serial()` makes tests order-dependent: a single failure cascades to all subsequent tests, and the suite can't be sharded.
+**10b. Serial test ordering** `[Playwright only]` — `test.describe.serial()` makes tests order-dependent: a single failure cascades to all subsequent tests, and the suite can't be sharded.
 
 **Rule:** Replace serial suites with self-contained tests using `beforeEach` for shared setup. If sequential flow is genuinely required, use a single test with `test.step()` blocks. If serial is unavoidable, add `// JUSTIFIED:` on the line above `test.describe.serial(`.
 
-#### 9. Hard-coded Sleeps `[grep-detectable]`
-
-**Symptom:** Explicit sleep calls pause execution for a fixed duration instead of waiting for a condition.
-
-**Rule:** Never use explicit sleep (`waitForTimeout` / `cy.wait(ms)`) — rely on framework auto-wait or condition-based waits.
-
-Note: `timeout` option values in `waitFor({ timeout: N })` or `toBeVisible({ timeout: N })` are NOT flagged — these are bounds, not sleeps.
-
-#### 10. YAGNI — Dead Test Code `[LLM-only]`
+#### 11. YAGNI — Dead Test Code `[LLM-only]`
 
 Two sub-patterns: unused code in Page Objects, and zombie spec files.
 
-**10a. YAGNI in Page Objects** — POM has locators or methods never referenced by any spec. Or a POM class extends a parent with zero additional members (empty wrapper class).
+**11a. YAGNI in Page Objects** — POM has locators or methods never referenced by any spec. Or a POM class extends a parent with zero additional members (empty wrapper class).
 
 **Procedure:**
 1. List all public members of each changed POM file
@@ -279,7 +332,7 @@ Two sub-patterns: unused code in Page Objects, and zombie spec files.
 
 **Rule:** Delete unused members. Make internal-only members `private`. Apply the 2+ threshold before creating or keeping Util methods — if a helper is called from only one place, inline it. Flag empty wrapper classes for review — they may be intentional convention or dead code.
 
-**10b. Zombie spec files** — An entire spec file whose tests are all subsets of tests in another spec file covering the same feature. The file adds no coverage that isn't already verified elsewhere.
+**11b. Zombie spec files** — An entire spec file whose tests are all subsets of tests in another spec file covering the same feature. The file adds no coverage that isn't already verified elsewhere.
 
 **Procedure:** After reviewing all files in scope, cross-check spec files with similar names or feature coverage. If every test in file A is a subset of a test in file B, flag file A for deletion.
 
@@ -340,14 +393,15 @@ Present findings grouped by severity:
 |---|-------|-----|-------|-----------------|
 | 1 | Name-Assertion | P0 | LLM | Noun in name with no matching `expect()` |
 | 2 | Missing Then | P0 | LLM | Action without final state verification |
-| 3 | Error Swallowing | P0 | grep | `try/catch` in spec, `.catch(() => {})` in POM |
-| 4 | Always-Passing | P0 | grep+LLM | `>=0`; `toBeAttached()` with no `// JUSTIFIED:`; `expect(await.*isVisible())` (no retry) → confirm if element can be absent |
+| 3 | Error Swallowing | P0 | grep+LLM | `.catch(() => {})` in POM (grep); `try/catch` around assertions in spec (LLM) |
+| 4 | Always-Passing | P0 | grep+LLM | `>=0`; `toBeAttached()`; one-shot booleans (`isVisible/textContent/getAttribute`); `locator.toBeTruthy()`; `{ timeout: 0 }` on assertions |
 | 5 | Bypass Patterns | P0/P1 | grep | `expect()` inside `if`; `force: true` without `// JUSTIFIED:` |
 | 6 | Raw DOM Queries | P1 | grep | `document.querySelector` in `evaluate` |
 | 7 | Focused Test Leak | P0 | grep | `test.only(`, `it.only(`, `describe.only(` — no `// JUSTIFIED:` exemption |
-| 8 | Flaky Test Patterns | P1 | LLM+grep | `nth()` without comment; `test.describe.serial()` |
-| 9 | Hard-coded Sleeps | P2 | grep | `waitForTimeout()`, `cy.wait(ms)` |
-| 10 | YAGNI + Zombie Specs | P2 | LLM | Unused POM member; empty wrapper; single-use Util; zombie spec file (all tests covered elsewhere) |
+| 8 | Missing Assertion | P0 | grep | 8a: `page.locator(...)` standalone; 8b: `await el.isVisible();` standalone — nothing ever asserts |
+| 9 | Hard-coded Sleeps | P1 | grep | `waitForTimeout()`, `cy.wait(ms)` |
+| 10 | Flaky Test Patterns | P1 | LLM+grep | `nth()` without comment; `test.describe.serial()` |
+| 11 | YAGNI + Zombie Specs | P2 | LLM | Unused POM member; empty wrapper; single-use Util; zombie spec file |
 
 ---
 

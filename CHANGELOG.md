@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.1.2] - 2026-03-19
+
+### Fixed
+- **`playwright-test-generator` Step 3 — browser exploration method corrected**: `playwright-cli` (non-existent package) removed entirely. Agent-browser tools (`browser_navigate`, `browser_snapshot`, `browser_click`, `browser_type`, `browser_close`) are now the primary exploration method. `npx playwright codegen` documented as a manual reference only — interactive, not automatable in an agent pipeline.
+- **README Compatibility** — `playwright-test-generator` Compatibility section updated to reflect agent-browser as primary exploration method.
+
+### Changed
+- **`e2e-reviewer` renumbered to 11 checks** — #8 Missing Assertion inserted (Tier 1, P0); Flaky Test Patterns reordered to #10, YAGNI to #11. Final order: #1–#8 Tier 1, #9 Hard-coded Sleeps, #10 Flaky, #11 YAGNI.
+- **`e2e-reviewer` #4 Always-Passing expanded** — four new sub-cases: one-shot DOM reads (`textContent/getAttribute`), Locator-as-truthy (`toBeTruthy()` on Locator), assertion retry disabled (`{ timeout: 0 }`), and explicit `toBeAttached\(\)` grep pattern added to Phase 1.
+- **`e2e-reviewer` #8 Missing Assertion** (new, P0) — merged from former #11/#12: 8a dangling locator `[Playwright grep]`, 8b boolean result discarded `[all frameworks grep]`. Cypress dangling selectors require Phase 2 manual check.
+- **`e2e-reviewer` #3 Error Swallowing** — `try/catch` in specs moved to Phase 2 LLM (false positive risk in setup/teardown); `.catch(() => {})` in POM remains Phase 1 grep. Quick Reference updated to `grep+LLM`.
+- **`e2e-reviewer` #5a Conditional Bypass** — clarified as runtime `if`-gated assertion only; removed misleading "mid-test `test.skip()`" reference.
+- **`e2e-reviewer` #9 Hard-coded Sleeps** — severity P2 → P1 (direct flakiness cause); added BAD/GOOD code example.
+- **`e2e-reviewer` assertion weakening removed** — `toBeDefined()` / `not.toBeNull()` dropped; unit-test concern, low ROI in E2E context.
+- **`e2e-reviewer` code examples simplified** — generic placeholders throughout; `async ({ page })` signatures added to #1/#2; `// JUSTIFIED:` colon normalized.
+- **`e2e-reviewer` sub-label corrections** — Flaky: `8a/8b` → `10a/10b`; YAGNI: `10a/10b` → `11a/11b`; Phase 1 grep list reordered #3–#10 sequential.
+- **README** — pattern count 10 → 11, #4/#8 table entries updated, Review Workflow updated, Phase 1 range noted as partial for #10.
+- **plugin.json** / **marketplace.json** — version 1.1.2, pattern count updated to 11.
+
 ## [1.1.1] - 2026-03-18
 
 ### Changed
