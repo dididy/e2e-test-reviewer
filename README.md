@@ -1,6 +1,6 @@
-# e2e-skills — Playwright & Cypress E2E Test Generation, Review, and Debugging for Claude Code
+# e2e-skills — E2E Test Generation, Review, and Debugging
 
-E2E tests that always pass are worse than no tests — they give false confidence while real bugs slip through. This [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview) plugin catches what CI misses: **tests that pass but prove nothing**, and **failures that are hard to trace**.
+E2E tests that always pass are worse than no tests — they give false confidence while real bugs slip through. A [Claude Code](https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview) plugin that catches what CI misses: **tests that pass but prove nothing**, and **failures that are hard to trace**.
 
 Four complementary skills that cover the full E2E lifecycle:
 
