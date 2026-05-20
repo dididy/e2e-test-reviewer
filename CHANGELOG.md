@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.3.2] - 2026-05-20
+
+### Changed
+- **Discovery metadata refresh** — README, Claude plugin, Codex plugin, and Claude marketplace surfaces now describe the bundle as an AI agent testing toolkit for E2E test automation, Playwright test generation, Cypress test review, flaky test root-cause analysis, false-positive detection, and test smell scanning. Added matching discovery keywords to the Codex and Claude marketplace manifests.
+- **`e2e-reviewer` frontmatter description length** — shortened the `SKILL.md` description to stay under the 1024-character skill-loader limit while preserving the P0/P1/P2 pattern phrase order required by CI.
+- All four skill `SKILL.md` files and the three manifests (`.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `.codex-plugin/plugin.json`) bumped to `1.3.2` in lock-step per the cross-host parity contract.
+
+### Fixed
+- **Installed skill loader warning** — `e2e-reviewer` no longer exceeds the loader description limit after reinstalling from this release.
+
 ## [1.3.1] - 2026-05-20
 
 ### Added

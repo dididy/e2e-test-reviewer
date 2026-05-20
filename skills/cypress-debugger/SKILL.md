@@ -4,7 +4,7 @@ description: Use when Cypress tests have actually failed and you need to diagnos
 license: Apache-2.0
 metadata:
   author: voidmatcha
-  version: "1.3.1"
+  version: "1.3.2"
 ---
 
 # Cypress Failed Test Debugger

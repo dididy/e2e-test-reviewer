@@ -1,10 +1,10 @@
 ---
 name: e2e-reviewer
-description: 'Use when reviewing, auditing, or improving E2E test specs for Playwright or Cypress — static code analysis of existing test files, not diagnosing runtime failures. Triggers on "review my tests", "audit test quality", "find weak tests", "my tests always pass but miss bugs", "tests pass CI but miss regressions", "improve playwright tests", "improve cypress tests", "check test coverage gaps", "my tests are fragile", "tests break on every UI change", "test suite is hard to maintain", "we have coverage but bugs still slip through", "flaky tests", "test anti-patterns", "check my e2e tests", "tests pass locally but fail in CI". Reviews 19 anti-patterns grouped by severity. P0 must-fix (silent always-pass): name-assertion mismatch, missing Then, error swallowing, Cypress uncaught:exception suppression, always-passing assertions, bypass patterns, focused test leak, missing assertions, missing auth setup, missing await on expect, missing await on action. P1 should-fix (poor diagnostics): raw DOM queries, hard-coded sleeps, flaky test patterns, inconsistent POM usage, hardcoded credentials, direct page action API, expect.soft overuse. P2 nice-to-fix (maintenance): YAGNI + zombie specs.'
+description: 'Use when reviewing or improving existing Playwright/Cypress E2E specs or POMs via static analysis, not runtime failure debugging. Triggers on "review my tests", "audit test quality", "find weak tests", "improve playwright tests", "improve cypress tests", "flaky tests", "test anti-patterns", "coverage gaps", and tests that pass while missing bugs. Reviews 19 anti-patterns. P0 must-fix (silent always-pass): name-assertion mismatch, missing Then, error swallowing, Cypress uncaught:exception suppression, always-passing assertions, bypass patterns, focused test leak, missing assertions, missing auth setup, missing await on expect, missing await on action. P1 should-fix (poor diagnostics): raw DOM queries, hard-coded sleeps, flaky test patterns, inconsistent POM usage, hardcoded credentials, direct page action API, expect.soft overuse. P2 nice-to-fix (maintenance): YAGNI + zombie specs.'
 license: Apache-2.0
 metadata:
   author: voidmatcha
-  version: "1.3.1"
+  version: "1.3.2"
 ---
 
 # E2E Test Scenario Quality Review

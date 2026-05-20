@@ -1,8 +1,8 @@
-# e2e-skills — E2E Test Generation, Review, and Debugging
+# e2e-skills — Playwright and Cypress E2E Test Generation, Review, and Debugging
 
-E2E tests that always pass are worse than no tests — they give false confidence while real bugs slip through. An Agent Skills bundle for [Claude Code](https://claude.com/product/claude-code) and [Codex](https://github.com/openai/codex) (and other [`AGENTS.md`](https://agents.md)-compatible runtimes via the `skills` CLI) by [@voidmatcha](https://github.com/voidmatcha) that catches what CI misses: **tests that pass but prove nothing**, and **failures that are hard to trace**.
+E2E tests that always pass are worse than no tests — they give false confidence while real bugs slip through. `e2e-skills` is an AI agent testing toolkit for Playwright and Cypress: generate end-to-end tests, review existing specs for false positives and test smells, debug flaky E2E failures, and turn noisy CI reports into root-cause fixes. It runs as an Agent Skills bundle for [Claude Code](https://claude.com/product/claude-code) and [Codex](https://github.com/openai/codex) (and other [`AGENTS.md`](https://agents.md)-compatible runtimes via the `skills` CLI) by [@voidmatcha](https://github.com/voidmatcha), catching what CI misses: **tests that pass but prove nothing**, and **failures that are hard to trace**.
 
-Four complementary skills that cover the full E2E lifecycle:
+Four complementary skills cover the full E2E testing lifecycle, from Playwright test generation to Cypress test review and failure debugging:
 
 1. **`playwright-test-generator`** — generates Playwright E2E tests from scratch, from coverage gap analysis to passing, reviewed tests
 2. **`e2e-reviewer`** — static analysis of existing Playwright and Cypress specs; flags 19 anti-patterns (P0 silent always-pass, P1 poor diagnostics, P2 maintenance) that can make tests pass CI while missing real regressions
