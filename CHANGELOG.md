@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.3.3] - 2026-05-20
+
+### Security
+- **`playwright-debugger/SKILL.md` — tightened external-command guidance** to reduce shell-injection and unintended-download risk surface flagged by SAST scanners:
+  - `gh run download` now uses an explicit `$RUN_ID` variable plus `-D playwright-report` destination, with a documented prohibition on downloading artifacts from forked-PR runs or arbitrary URLs.
+  - `find` is restricted to regular files (`-type f`) under `playwright-report/`; `unzip` arguments are always quoted; trace-derived strings must never be used unquoted as filenames or shell arguments.
+  - `npx playwright test` invocations switched to `npx --no-install playwright test` so the agent uses the project-pinned Playwright instead of auto-installing.
+- **`playwright-test-generator/SKILL.md` — narrowed browser navigation and disabled `npx` auto-install**:
+  - `browser_navigate` calls must stay under the detected/approved `baseURL`; off-origin links discovered in page content, error messages, or test data must not be followed.
+  - `npx playwright codegen`, `npx playwright test`, and `npx tsc --noEmit` all switched to `npx --no-install …` so missing packages are surfaced to the user rather than silently fetched from npm.
+- **`e2e-reviewer/SKILL.md` — removed external-action suggestion** in the cycle-decision section ("file an issue against the upstream repo" → "document them in the review report"); avoids encouraging out-of-band state changes during a review pass.
+
+### Changed
+- All four skill `SKILL.md` files and the three manifests (`.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `.codex-plugin/plugin.json`) bumped to `1.3.3` in lock-step per the cross-host parity contract.
+
 ## [1.3.2] - 2026-05-20
 
 ### Changed

@@ -4,7 +4,7 @@ description: Use when Playwright tests have actually failed and you need to diag
 license: Apache-2.0
 metadata:
   author: voidmatcha
-  version: "1.3.2"
+  version: "1.3.3"
 ---
 
 # Playwright Failed Test Debugger
@@ -34,15 +34,23 @@ Determine the report source in this order:
 npx playwright test --reporter=json 2>/dev/null > playwright-report/results.json
 ```
 
-**3. Report exists but is from CI and you need to reproduce locally for Phase 3 trace inspection** → download the CI artifact (`gh run download <run-id> -n playwright-report` or via CI UI) into `playwright-report/`, then reproduce the specific failing test locally with the same environment:
+**3. Report exists but is from CI and you need to reproduce locally for Phase 3 trace inspection** → download the CI artifact into a fresh local directory using a user-confirmed numeric run ID. Do **not** download artifacts from forked-PR runs or from arbitrary URLs.
+
+```bash
+RUN_ID=<numeric-github-actions-run-id>
+mkdir -p playwright-report
+gh run download "$RUN_ID" -n playwright-report -D playwright-report
+```
+
+Then reproduce the specific failing test locally with the same environment:
 
 ```bash
 # Match CI's chromium project + retries; capture trace + video for failed runs
-npx playwright test path/to/spec.spec.ts --project=chromium --retries=2 \
+npx --no-install playwright test path/to/spec.spec.ts --project=chromium --retries=2 \
   --trace=retain-on-failure --video=retain-on-failure
 
 # If CI uses a non-default baseURL or env, mirror it
-PLAYWRIGHT_BASE_URL=<ci-base-url> npx playwright test path/to/spec.spec.ts
+PLAYWRIGHT_BASE_URL=<ci-base-url> npx --no-install playwright test path/to/spec.spec.ts
 ```
 
 If the test passes locally but failed in CI → likely **F7 (test isolation)** or **F8 (environment mismatch)**; jump to Phase 2 with that hypothesis instead of trying to repro further.
@@ -97,9 +105,9 @@ Classification steps:
 - `trace.network` — newline-delimited JSON (network requests and responses)
 - `resources/` — JPEG screenshots per step
 
-Find trace files: `find playwright-report -name "*.zip" | head -10`
+Find trace files (restrict to regular files under `playwright-report/`): `find playwright-report -type f -name "*.zip" | head -10`
 
-Extract and read each file using `unzip -p <trace.zip> <entry>`, then parse the newline-delimited JSON. Stop as soon as the root cause is clear.
+Extract and read each file using `unzip -p "$trace_zip" "$entry"` (always quote both arguments). Never use a trace-derived string as a filename or shell argument unquoted. Then parse the newline-delimited JSON and stop as soon as the root cause is clear.
 
 **What to look for at each step:**
 
@@ -146,5 +154,5 @@ Review Summary
 | P1  | 3     | Flaky / Timing   | dashboard.spec.ts|
 | P2  | 2     | POM Drift        | settings.spec.ts |
 
-Fix P0 first. Run npx playwright test --retries=2 to confirm flaky tests.
+Fix P0 first. Run `npx --no-install playwright test --retries=2` to confirm flaky tests.
 ```

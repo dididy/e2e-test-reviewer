@@ -4,7 +4,7 @@ description: 'Use when reviewing or improving existing Playwright/Cypress E2E sp
 license: Apache-2.0
 metadata:
   author: voidmatcha
-  version: "1.3.2"
+  version: "1.3.3"
 ---
 
 # E2E Test Scenario Quality Review
@@ -389,7 +389,7 @@ If you can guarantee per-cycle execution under ~5 min and don't need thematic SU
 - Cascade cleanups from 4.3 emerged after the 2nd cycle's web-first replacements
 - Marginal gain in cycle 2 was > 10% (signals there might be more in cycle 3)
 
-**Do NOT add cycles past 5% marginal gain.** That's diminishing returns. For residual hits, file an issue against the upstream repo or add `// JUSTIFIED:` comments — don't manufacture cycles.
+**Do NOT add cycles past 5% marginal gain.** That's diminishing returns. For residual hits, document them in the review report or add `// JUSTIFIED:` comments when editing is in scope — don't manufacture cycles.
 
 **Quick decision flowchart**:
 ```

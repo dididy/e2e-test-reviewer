@@ -4,7 +4,7 @@ description: Use when generating new Playwright E2E tests from scratch. Triggers
 license: Apache-2.0
 metadata:
   author: voidmatcha
-  version: "1.3.2"
+  version: "1.3.3"
 ---
 
 # playwright-test-generator
@@ -89,12 +89,12 @@ When no argument is given:
 
 **Do not guess selectors from source code alone.** Use live browser exploration to discover real element roles, labels, and testids.
 
-**Navigation target:** `<baseURL>/<target-path>` from the project profile (Step 1) + selected route (Step 2). If the page requires authentication, open the login page first, authenticate, then navigate to the target.
+**Navigation target:** `<baseURL>/<target-path>` from the project profile (Step 1) + selected route (Step 2). Navigate only to URLs under the detected/user-approved `baseURL` — do **not** follow off-origin links discovered in page content, error messages, or test data. If the page requires authentication, open the login page first, authenticate, then navigate to the target.
 
 Use **agent-browser tools** as the primary exploration method:
 
 ```
-1. browser_navigate <target-URL>
+1. browser_navigate <target-URL>   # only when target-URL is under the approved baseURL
 2. browser_snapshot → identify interactive elements (do NOT paste raw content into responses)
 3. For each key interaction (button click, form fill, modal open, nav link):
    a. browser_click / browser_type / browser_fill_form / browser_select_option
@@ -102,9 +102,9 @@ Use **agent-browser tools** as the primary exploration method:
 4. browser_close
 ```
 
-**Reference only — do not use as primary:** `npx playwright codegen <URL>` launches an interactive browser recorder. It is useful for manually discovering selectors during development but cannot be automated in an agent pipeline.
+**Reference only — do not use as primary:** `npx --no-install playwright codegen <URL>` launches an interactive browser recorder using the project-local Playwright install. It is useful for manually discovering selectors during development but cannot be automated in an agent pipeline. Do not allow package auto-install (`--no-install` blocks it); if Playwright is missing, ask the user to install it explicitly.
 
-If agent-browser tools are unavailable, use `npx playwright codegen <URL>` manually and paste discovered selectors into the Locator Mapping Table in Step 4.
+If agent-browser tools are unavailable, use `npx --no-install playwright codegen <URL>` manually and paste discovered selectors into the Locator Mapping Table in Step 4.
 
 **Snapshot handling:** Extract element roles, labels, testids, and visible text from snapshot output. Summarize findings — do NOT paste raw YAML into responses.
 
@@ -193,10 +193,11 @@ Invoke the `e2e-reviewer` skill using the `Skill` tool, targeting the generated 
 ```bash
 # 1. Type check — must pass with 0 errors
 # Use e2e-specific tsconfig if present (e.g. e2e/tsconfig.json), otherwise root tsconfig
-npx tsc --noEmit -p <e2e/tsconfig.json or tsconfig.json>
+# --no-install: never auto-install typescript via npx; rely on the project's pinned version
+npx --no-install tsc --noEmit -p <e2e/tsconfig.json or tsconfig.json>
 
-# 2. Run generated tests
-npx playwright test <generated-spec-file> --project=chromium
+# 2. Run generated tests (project-local Playwright only; never auto-install)
+npx --no-install playwright test <generated-spec-file> --project=chromium
 ```
 
 ### Failure handling (max 3 auto-fix attempts)
